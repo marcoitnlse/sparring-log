@@ -1,11 +1,19 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useOpponents } from '../hooks/useOpponents'
+import type { Opponent } from '../hooks/useOpponents'
 import { useBouts } from '../hooks/useBouts'
 import type { Bout } from '../hooks/useBouts'
 import { computeBoutStats, groupBoutsByOpponent } from '../lib/boutStats'
 import { RecentFormDots } from '../components/RecentFormDots'
+import { SegmentedToggle } from '../components/SegmentedToggle'
 import { formatDate } from '../lib/formatDate'
+import { HANDEDNESS_OPTIONS } from '../lib/opponentOptions'
+import type { Handedness } from '../types/database'
+
+function handednessLabel(h: Handedness | null) {
+  return h === 'right' ? 'R' : h === 'left' ? 'L' : null
+}
 
 function LastFiveList({ bouts }: { bouts: Bout[] }) {
   return (
@@ -34,12 +42,95 @@ function LastFiveList({ bouts }: { bouts: Bout[] }) {
   )
 }
 
+interface EditOpponentFormProps {
+  opponent: Opponent
+  onUpdate: (id: string, patch: { name?: string; handedness?: Handedness | null }) => Promise<Opponent>
+  onDelete: (id: string) => Promise<void>
+  onClose: () => void
+}
+
+function EditOpponentForm({ opponent, onUpdate, onDelete, onClose }: EditOpponentFormProps) {
+  const [name, setName] = useState(opponent.name)
+  const [handedness, setHandedness] = useState<Handedness>(opponent.handedness ?? 'right')
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSave() {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    setSaving(true)
+    setError(null)
+    try {
+      await onUpdate(opponent.id, { name: trimmed, handedness })
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save changes.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm(`Delete ${opponent.name}? This cannot be undone.`)) return
+    setDeleting(true)
+    setError(null)
+    try {
+      await onDelete(opponent.id)
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete opponent.')
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3 border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+      />
+      <SegmentedToggle options={HANDEDNESS_OPTIONS} value={handedness} onChange={setHandedness} />
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !name.trim()}
+          className="flex-1 rounded-lg bg-slate-900 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
+        >
+          {saving ? 'Saving…' : 'Save changes'}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 rounded-lg border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+        >
+          Cancel
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={handleDelete}
+        disabled={deleting}
+        className="w-full rounded-lg py-2 text-sm font-medium text-red-600 disabled:opacity-50 dark:text-red-400"
+      >
+        {deleting ? 'Deleting…' : 'Delete opponent'}
+      </button>
+    </div>
+  )
+}
+
 export function OpponentsPage() {
-  const { opponents, loading, createOpponent } = useOpponents()
+  const { opponents, loading, error, createOpponent, updateOpponent, deleteOpponent } = useOpponents()
   const { bouts } = useBouts()
   const [name, setName] = useState('')
+  const [newHandedness, setNewHandedness] = useState<Handedness>('right')
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   const byOpponent = useMemo(() => groupBoutsByOpponent(bouts), [bouts])
 
@@ -49,8 +140,9 @@ export function OpponentsPage() {
     if (!trimmed || saving) return
     setSaving(true)
     try {
-      await createOpponent(trimmed)
+      await createOpponent(trimmed, newHandedness)
       setName('')
+      setNewHandedness('right')
     } finally {
       setSaving(false)
     }
@@ -58,25 +150,30 @@ export function OpponentsPage() {
 
   return (
     <div className="p-4">
-      <form onSubmit={handleSubmit} className="mb-6 flex gap-2">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="New opponent name"
-          className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-        />
-        <button
-          type="submit"
-          disabled={!name.trim() || saving}
-          className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
-        >
-          Add
-        </button>
+      <form onSubmit={handleSubmit} className="mb-6 space-y-3">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="New opponent name"
+            className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+          />
+          <button
+            type="submit"
+            disabled={!name.trim() || saving}
+            className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
+          >
+            Add
+          </button>
+        </div>
+        <SegmentedToggle options={HANDEDNESS_OPTIONS} value={newHandedness} onChange={setNewHandedness} />
       </form>
 
       {loading ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
+      ) : error ? (
+        <p className="text-sm text-red-600 dark:text-red-400">Couldn't load opponents: {error}</p>
       ) : opponents.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">
           No opponents yet — add one above, or add one inline while logging a bout.
@@ -87,27 +184,53 @@ export function OpponentsPage() {
             const group = byOpponent.get(o.id) ?? []
             const stats = computeBoutStats(group)
             const hasBouts = group.length > 0
+            const hand = handednessLabel(o.handedness)
 
             return (
               <li key={o.id}>
-                <button
-                  type="button"
-                  onClick={() => hasBouts && setExpandedId(expandedId === o.id ? null : o.id)}
-                  disabled={!hasBouts}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-slate-100 disabled:active:bg-transparent dark:active:bg-slate-900"
-                >
-                  <div>
-                    <p className="text-base text-slate-800 dark:text-slate-200">{o.name}</p>
-                    {hasBouts && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {stats.wins}–{stats.losses}
-                        {stats.draws > 0 ? `–${stats.draws}` : ''} · {stats.total}{' '}
-                        {stats.total === 1 ? 'bout' : 'bouts'}
+                <div className="flex items-center justify-between px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => hasBouts && setExpandedId(expandedId === o.id ? null : o.id)}
+                    disabled={!hasBouts}
+                    className="flex flex-1 items-center justify-between text-left active:bg-slate-100 disabled:active:bg-transparent dark:active:bg-slate-900"
+                  >
+                    <div>
+                      <p className="text-base text-slate-800 dark:text-slate-200">
+                        {o.name}
+                        {hand && (
+                          <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            {hand}
+                          </span>
+                        )}
                       </p>
-                    )}
-                  </div>
-                  {hasBouts && <RecentFormDots outcomes={stats.recentForm} />}
-                </button>
+                      {hasBouts && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {stats.wins}–{stats.losses}
+                          {stats.draws > 0 ? `–${stats.draws}` : ''} · {stats.total}{' '}
+                          {stats.total === 1 ? 'bout' : 'bouts'}
+                        </p>
+                      )}
+                    </div>
+                    {hasBouts && <RecentFormDots outcomes={stats.recentForm} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingId(editingId === o.id ? null : o.id)}
+                    aria-label={`Edit ${o.name}`}
+                    className="ml-3 shrink-0 text-sm text-slate-500 underline underline-offset-2 dark:text-slate-400"
+                  >
+                    Edit
+                  </button>
+                </div>
+                {editingId === o.id && (
+                  <EditOpponentForm
+                    opponent={o}
+                    onUpdate={updateOpponent}
+                    onDelete={deleteOpponent}
+                    onClose={() => setEditingId(null)}
+                  />
+                )}
                 {expandedId === o.id && <LastFiveList bouts={group.slice(0, 5)} />}
               </li>
             )
