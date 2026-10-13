@@ -6,7 +6,6 @@ import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabaseClient'
 import { computeBoutStats } from '../lib/boutStats'
 import { SegmentedToggle } from '../components/SegmentedToggle'
-import { RecentFormDots } from '../components/RecentFormDots'
 import {
   BOUT_FORMAT_FILTER_OPTIONS,
   TARGET_SCORE_FILTER_OPTIONS,
@@ -143,11 +142,6 @@ export function StatsPage() {
             <StatTile label="Avg margin" value={stats.avgMargin !== null ? (stats.avgMargin > 0 ? `+${stats.avgMargin}` : stats.avgMargin) : '—'} />
           </div>
         )}
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-sm font-medium text-slate-500 dark:text-slate-400">Recent form</h2>
-        {!loading && <RecentFormDots outcomes={stats.recentForm} />}
       </section>
 
       <section>
