@@ -101,7 +101,8 @@ export function OpponentsPage() {
                     {hasBouts && (
                       <p className="text-xs text-slate-500 dark:text-slate-400">
                         {stats.wins}–{stats.losses}
-                        {stats.draws > 0 ? `–${stats.draws}` : ''}
+                        {stats.draws > 0 ? `–${stats.draws}` : ''} · {stats.total}{' '}
+                        {stats.total === 1 ? 'bout' : 'bouts'}
                       </p>
                     )}
                   </div>
