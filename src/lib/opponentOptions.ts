@@ -11,11 +11,3 @@ export const HANDEDNESS_FILTER_OPTIONS: readonly { value: HandednessFilter; labe
   { value: 'all', label: 'All' },
   ...HANDEDNESS_OPTIONS,
 ]
-
-/** For the opponent edit/add form, where "unknown" (null) is a real, pickable state. */
-export type HandednessOrUnknown = Handedness | 'unknown'
-
-export const HANDEDNESS_EDIT_OPTIONS: readonly { value: HandednessOrUnknown; label: string }[] = [
-  { value: 'unknown', label: 'Unknown' },
-  ...HANDEDNESS_OPTIONS,
-]

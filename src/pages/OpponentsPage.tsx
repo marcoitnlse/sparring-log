@@ -8,9 +8,8 @@ import { computeBoutStats, groupBoutsByOpponent } from '../lib/boutStats'
 import { RecentFormDots } from '../components/RecentFormDots'
 import { SegmentedToggle } from '../components/SegmentedToggle'
 import { formatDate } from '../lib/formatDate'
-import { HANDEDNESS_EDIT_OPTIONS } from '../lib/opponentOptions'
+import { HANDEDNESS_OPTIONS } from '../lib/opponentOptions'
 import type { Handedness } from '../types/database'
-import type { HandednessOrUnknown } from '../lib/opponentOptions'
 
 function handednessLabel(h: Handedness | null) {
   return h === 'right' ? 'R' : h === 'left' ? 'L' : null
@@ -52,7 +51,7 @@ interface EditOpponentFormProps {
 
 function EditOpponentForm({ opponent, onUpdate, onDelete, onClose }: EditOpponentFormProps) {
   const [name, setName] = useState(opponent.name)
-  const [handedness, setHandedness] = useState<HandednessOrUnknown>(opponent.handedness ?? 'unknown')
+  const [handedness, setHandedness] = useState<Handedness>(opponent.handedness ?? 'right')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -63,10 +62,7 @@ function EditOpponentForm({ opponent, onUpdate, onDelete, onClose }: EditOpponen
     setSaving(true)
     setError(null)
     try {
-      await onUpdate(opponent.id, {
-        name: trimmed,
-        handedness: handedness === 'unknown' ? null : handedness,
-      })
+      await onUpdate(opponent.id, { name: trimmed, handedness })
       onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save changes.')
@@ -96,7 +92,7 @@ function EditOpponentForm({ opponent, onUpdate, onDelete, onClose }: EditOpponen
         onChange={(e) => setName(e.target.value)}
         className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
       />
-      <SegmentedToggle options={HANDEDNESS_EDIT_OPTIONS} value={handedness} onChange={setHandedness} />
+      <SegmentedToggle options={HANDEDNESS_OPTIONS} value={handedness} onChange={setHandedness} />
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <div className="flex gap-2">
         <button
@@ -131,7 +127,7 @@ export function OpponentsPage() {
   const { opponents, loading, error, createOpponent, updateOpponent, deleteOpponent } = useOpponents()
   const { bouts } = useBouts()
   const [name, setName] = useState('')
-  const [newHandedness, setNewHandedness] = useState<HandednessOrUnknown>('unknown')
+  const [newHandedness, setNewHandedness] = useState<Handedness>('right')
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -144,9 +140,9 @@ export function OpponentsPage() {
     if (!trimmed || saving) return
     setSaving(true)
     try {
-      await createOpponent(trimmed, newHandedness === 'unknown' ? null : newHandedness)
+      await createOpponent(trimmed, newHandedness)
       setName('')
-      setNewHandedness('unknown')
+      setNewHandedness('right')
     } finally {
       setSaving(false)
     }
@@ -171,7 +167,7 @@ export function OpponentsPage() {
             Add
           </button>
         </div>
-        <SegmentedToggle options={HANDEDNESS_EDIT_OPTIONS} value={newHandedness} onChange={setNewHandedness} />
+        <SegmentedToggle options={HANDEDNESS_OPTIONS} value={newHandedness} onChange={setNewHandedness} />
       </form>
 
       {loading ? (
