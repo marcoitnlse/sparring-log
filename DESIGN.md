@@ -104,7 +104,7 @@ This schema already supports the deferred features with no migration needed: hea
 | `/login` | Login/Signup | Unprotected entry point |
 | `/` | **Quick Log Bout (home)** | Speed-optimized bout entry — opens first after login |
 | `/history` | Bout History | Reverse-chronological list, tap to edit a mistake |
-| `/opponents` | Opponents | Add opponents; simple list (no delete in v1) |
+| `/opponents` | Opponents | Add opponents; each row shows head-to-head record + recent-form dots, tap to expand the last 5 bouts against them (no delete in v1) |
 | `/stats` | Stats & Profile | Filterable record (by opponent, match format, target score), touches scored/conceded/margin, recent-form dots, and display-name edit |
 
 Bottom tab bar nav (Log / History / Opponents / Stats), thumb-reachable, hidden on `/login`.

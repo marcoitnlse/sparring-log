@@ -55,3 +55,15 @@ export function computeBoutStats(bouts: Bout[]): BoutStatsSummary {
     recentForm,
   }
 }
+
+/** Groups bouts by opponent, preserving each bout's relative order
+ * (so every group stays newest-first, same as the input array). */
+export function groupBoutsByOpponent(bouts: Bout[]): Map<string, Bout[]> {
+  const byOpponent = new Map<string, Bout[]>()
+  for (const bout of bouts) {
+    const group = byOpponent.get(bout.opponent_id)
+    if (group) group.push(bout)
+    else byOpponent.set(bout.opponent_id, [bout])
+  }
+  return byOpponent
+}
