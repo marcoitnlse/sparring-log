@@ -5,6 +5,11 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    // Allows the localhost.run SSH tunnel (random *.lhr.life subdomain each
+    // session) to reach this dev server for on-device testing over WSL2 NAT.
+    allowedHosts: ['.lhr.life'],
+  },
   plugins: [
     react(),
     tailwindcss(),
