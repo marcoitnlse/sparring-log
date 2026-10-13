@@ -43,8 +43,14 @@ function LastFiveList({ bouts }: { bouts: Bout[] }) {
   )
 }
 
-function EditOpponentForm({ opponent, onClose }: { opponent: Opponent; onClose: () => void }) {
-  const { updateOpponent, deleteOpponent } = useOpponents()
+interface EditOpponentFormProps {
+  opponent: Opponent
+  onUpdate: (id: string, patch: { name?: string; handedness?: Handedness | null }) => Promise<Opponent>
+  onDelete: (id: string) => Promise<void>
+  onClose: () => void
+}
+
+function EditOpponentForm({ opponent, onUpdate, onDelete, onClose }: EditOpponentFormProps) {
   const [name, setName] = useState(opponent.name)
   const [handedness, setHandedness] = useState<HandednessOrUnknown>(opponent.handedness ?? 'unknown')
   const [saving, setSaving] = useState(false)
@@ -57,7 +63,7 @@ function EditOpponentForm({ opponent, onClose }: { opponent: Opponent; onClose: 
     setSaving(true)
     setError(null)
     try {
-      await updateOpponent(opponent.id, {
+      await onUpdate(opponent.id, {
         name: trimmed,
         handedness: handedness === 'unknown' ? null : handedness,
       })
@@ -74,7 +80,7 @@ function EditOpponentForm({ opponent, onClose }: { opponent: Opponent; onClose: 
     setDeleting(true)
     setError(null)
     try {
-      await deleteOpponent(opponent.id)
+      await onDelete(opponent.id)
       onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete opponent.')
@@ -122,7 +128,7 @@ function EditOpponentForm({ opponent, onClose }: { opponent: Opponent; onClose: 
 }
 
 export function OpponentsPage() {
-  const { opponents, loading, createOpponent } = useOpponents()
+  const { opponents, loading, error, createOpponent, updateOpponent, deleteOpponent } = useOpponents()
   const { bouts } = useBouts()
   const [name, setName] = useState('')
   const [newHandedness, setNewHandedness] = useState<HandednessOrUnknown>('unknown')
@@ -170,6 +176,8 @@ export function OpponentsPage() {
 
       {loading ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
+      ) : error ? (
+        <p className="text-sm text-red-600 dark:text-red-400">Couldn't load opponents: {error}</p>
       ) : opponents.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">
           No opponents yet — add one above, or add one inline while logging a bout.
@@ -220,7 +228,12 @@ export function OpponentsPage() {
                   </button>
                 </div>
                 {editingId === o.id && (
-                  <EditOpponentForm opponent={o} onClose={() => setEditingId(null)} />
+                  <EditOpponentForm
+                    opponent={o}
+                    onUpdate={updateOpponent}
+                    onDelete={deleteOpponent}
+                    onClose={() => setEditingId(null)}
+                  />
                 )}
                 {expandedId === o.id && <LastFiveList bouts={group.slice(0, 5)} />}
               </li>
