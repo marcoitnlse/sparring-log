@@ -82,7 +82,7 @@ This is additive: no existing table is restructured, no existing policy removed,
 
 Design principles: UUID PKs, `user_id` FK on every user-owned table (so a future `club_id` + membership policy is additive), RLS on from day one, `weapon` constrained to `epee | foil | sabre` (UI only exposes épée now, so adding weapons later is UI-only), `bout_date` as a plain `date` so a future calendar/heatmap view groups by day with no timezone issues.
 
-Full DDL: [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), plus [`0002_add_bout_format.sql`](supabase/migrations/0002_add_bout_format.sql) which adds `bout_format` (`free | timed`) — whether the bout was an unstructured free exchange or a formal timed bout.
+Full DDL: [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), plus [`0002_add_bout_format.sql`](supabase/migrations/0002_add_bout_format.sql) (`bout_format`: `free | timed`) and [`0003_add_target_score.sql`](supabase/migrations/0003_add_target_score.sql) (`target_score`: `5 | 10 | 15`, the point target the bout was fenced to).
 
 Tables: `profiles` (1:1 with `auth.users`, auto-created via trigger on signup), `opponents` (user-owned), `bouts` (user-owned, FK to `opponents`), plus a `bout_stats` view (`security_invoker = true`, so it stays RLS-scoped) for win/loss/win-rate aggregation.
 

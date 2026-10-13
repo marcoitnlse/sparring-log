@@ -4,8 +4,9 @@ import { useBouts } from '../hooks/useBouts'
 import type { Opponent } from '../hooks/useOpponents'
 import { OpponentPicker } from '../components/OpponentPicker'
 import { ScoreStepper } from '../components/ScoreStepper'
-import { MatchFormatToggle } from '../components/MatchFormatToggle'
-import type { BoutFormat } from '../types/database'
+import { SegmentedToggle } from '../components/SegmentedToggle'
+import { BOUT_FORMAT_OPTIONS, TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
+import type { BoutFormat, TargetScore } from '../types/database'
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10)
@@ -20,6 +21,7 @@ export function QuickLogPage() {
   const [opponentScore, setOpponentScore] = useState(0)
   const [boutDate, setBoutDate] = useState(todayIso())
   const [boutFormat, setBoutFormat] = useState<BoutFormat>('timed')
+  const [targetScore, setTargetScore] = useState<TargetScore>(15)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
   const [notes, setNotes] = useState('')
@@ -50,6 +52,7 @@ export function QuickLogPage() {
         opponentScore,
         boutDate,
         boutFormat,
+        targetScore,
         notes: notes.trim() || undefined,
       })
       setToast(`Bout logged: ${fencerScore}–${opponentScore} vs. ${selected.name}`)
@@ -114,8 +117,9 @@ export function QuickLogPage() {
         )}
       </section>
 
-      <section>
-        <MatchFormatToggle value={boutFormat} onChange={setBoutFormat} />
+      <section className="flex flex-col gap-3">
+        <SegmentedToggle options={BOUT_FORMAT_OPTIONS} value={boutFormat} onChange={setBoutFormat} />
+        <SegmentedToggle options={TARGET_SCORE_OPTIONS} value={targetScore} onChange={setTargetScore} />
       </section>
 
       <section>

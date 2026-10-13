@@ -4,6 +4,7 @@
 
 export type Weapon = 'epee' | 'foil' | 'sabre'
 export type BoutFormat = 'free' | 'timed'
+export type TargetScore = 5 | 10 | 15
 
 export interface Database {
   public: {
@@ -57,6 +58,7 @@ export interface Database {
           opponent_id: string
           weapon: Weapon
           bout_format: BoutFormat
+          target_score: TargetScore
           fencer_score: number
           opponent_score: number
           bout_date: string
@@ -69,6 +71,7 @@ export interface Database {
           opponent_id: string
           weapon?: Weapon
           bout_format?: BoutFormat
+          target_score?: TargetScore
           fencer_score: number
           opponent_score: number
           bout_date?: string
@@ -81,6 +84,7 @@ export interface Database {
           opponent_id?: string
           weapon?: Weapon
           bout_format?: BoutFormat
+          target_score?: TargetScore
           fencer_score?: number
           opponent_score?: number
           bout_date?: string

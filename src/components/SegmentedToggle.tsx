@@ -1,20 +1,17 @@
-import type { BoutFormat } from '../types/database'
+interface SegmentedToggleProps<T extends string | number> {
+  options: readonly { value: T; label: string }[]
+  value: T
+  onChange: (value: T) => void
+}
 
-const OPTIONS: { value: BoutFormat; label: string }[] = [
-  { value: 'free', label: 'Free time' },
-  { value: 'timed', label: 'Timed match' },
-]
-
-export function MatchFormatToggle({
+export function SegmentedToggle<T extends string | number>({
+  options,
   value,
   onChange,
-}: {
-  value: BoutFormat
-  onChange: (value: BoutFormat) => void
-}) {
+}: SegmentedToggleProps<T>) {
   return (
     <div className="inline-flex rounded-full bg-slate-200 p-1 dark:bg-slate-800">
-      {OPTIONS.map((option) => (
+      {options.map((option) => (
         <button
           key={option.value}
           type="button"

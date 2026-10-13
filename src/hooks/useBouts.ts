@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from './useAuth'
-import type { BoutFormat, Database, Weapon } from '../types/database'
+import type { BoutFormat, Database, TargetScore, Weapon } from '../types/database'
 
 type BoutRow = Database['public']['Tables']['bouts']['Row']
 export type Bout = BoutRow & { opponent_name: string }
@@ -13,6 +13,7 @@ interface CreateBoutInput {
   boutDate: string
   weapon?: Weapon
   boutFormat?: BoutFormat
+  targetScore?: TargetScore
   notes?: string
 }
 
@@ -62,6 +63,7 @@ export function useBouts() {
           bout_date: input.boutDate,
           weapon: input.weapon ?? 'epee',
           bout_format: input.boutFormat ?? 'timed',
+          target_score: input.targetScore ?? 15,
           notes: input.notes ?? null,
         })
         .select('*, opponents(name)')
@@ -92,6 +94,7 @@ export function useBouts() {
           ...(patch.boutDate !== undefined && { bout_date: patch.boutDate }),
           ...(patch.weapon !== undefined && { weapon: patch.weapon }),
           ...(patch.boutFormat !== undefined && { bout_format: patch.boutFormat }),
+          ...(patch.targetScore !== undefined && { target_score: patch.targetScore }),
           ...(patch.notes !== undefined && { notes: patch.notes }),
         })
         .eq('id', id)

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useBouts } from '../hooks/useBouts'
 import type { Bout } from '../hooks/useBouts'
 import { ScoreStepper } from '../components/ScoreStepper'
-import { MatchFormatToggle } from '../components/MatchFormatToggle'
+import { SegmentedToggle } from '../components/SegmentedToggle'
+import { BOUT_FORMAT_OPTIONS, TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
 
 function formatDate(iso: string) {
   return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, {
@@ -18,6 +19,7 @@ function EditForm({ bout, onClose }: { bout: Bout; onClose: () => void }) {
   const [opponentScore, setOpponentScore] = useState(bout.opponent_score)
   const [boutDate, setBoutDate] = useState(bout.bout_date)
   const [boutFormat, setBoutFormat] = useState(bout.bout_format)
+  const [targetScore, setTargetScore] = useState(bout.target_score)
   const [notes, setNotes] = useState(bout.notes ?? '')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -30,6 +32,7 @@ function EditForm({ bout, onClose }: { bout: Bout; onClose: () => void }) {
         opponentScore,
         boutDate,
         boutFormat,
+        targetScore,
         notes: notes.trim() || undefined,
       })
       onClose()
@@ -55,8 +58,9 @@ function EditForm({ bout, onClose }: { bout: Bout; onClose: () => void }) {
         <ScoreStepper label="You" value={fencerScore} onChange={setFencerScore} />
         <ScoreStepper label="Opponent" value={opponentScore} onChange={setOpponentScore} />
       </div>
-      <div className="flex justify-center">
-        <MatchFormatToggle value={boutFormat} onChange={setBoutFormat} />
+      <div className="flex flex-col items-center gap-2">
+        <SegmentedToggle options={BOUT_FORMAT_OPTIONS} value={boutFormat} onChange={setBoutFormat} />
+        <SegmentedToggle options={TARGET_SCORE_OPTIONS} value={targetScore} onChange={setTargetScore} />
       </div>
       <input
         type="date"
@@ -131,7 +135,8 @@ export function HistoryPage() {
               <div>
                 <p className="font-medium text-slate-900 dark:text-slate-100">{bout.opponent_name}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {formatDate(bout.bout_date)} · {bout.bout_format === 'free' ? 'Free time' : 'Timed match'}
+                  {formatDate(bout.bout_date)} · {bout.bout_format === 'free' ? 'Free time' : 'Timed match'} · To{' '}
+                  {bout.target_score}
                 </p>
               </div>
               <div className="flex items-center gap-3">
