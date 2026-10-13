@@ -1,8 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useStats } from '../hooks/useStats'
+import { useBouts } from '../hooks/useBouts'
+import { useOpponents } from '../hooks/useOpponents'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabaseClient'
+import { computeBoutStats } from '../lib/boutStats'
+import { SegmentedToggle } from '../components/SegmentedToggle'
+import {
+  BOUT_FORMAT_FILTER_OPTIONS,
+  TARGET_SCORE_FILTER_OPTIONS,
+  type BoutFormatFilter,
+  type TargetScoreFilter,
+} from '../lib/boutOptions'
 
 function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
@@ -68,23 +77,69 @@ function ProfileSection() {
 }
 
 export function StatsPage() {
-  const { stats, loading } = useStats()
+  const { bouts, loading } = useBouts()
+  const { opponents } = useOpponents()
+
+  const [opponentFilter, setOpponentFilter] = useState<string>('all')
+  const [formatFilter, setFormatFilter] = useState<BoutFormatFilter>('all')
+  const [targetFilter, setTargetFilter] = useState<TargetScoreFilter>('all')
+
+  const filteredBouts = useMemo(
+    () =>
+      bouts.filter(
+        (b) =>
+          (opponentFilter === 'all' || b.opponent_id === opponentFilter) &&
+          (formatFilter === 'all' || b.bout_format === formatFilter) &&
+          (targetFilter === 'all' || b.target_score === targetFilter),
+      ),
+    [bouts, opponentFilter, formatFilter, targetFilter],
+  )
+
+  const stats = useMemo(() => computeBoutStats(filteredBouts), [filteredBouts])
 
   return (
     <div className="space-y-8 p-4">
+      <section>
+        <h2 className="mb-3 text-sm font-medium text-slate-500 dark:text-slate-400">Filters</h2>
+        <div className="flex flex-col gap-3">
+          <select
+            value={opponentFilter}
+            onChange={(e) => setOpponentFilter(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+          >
+            <option value="all">All opponents</option>
+            {opponents.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+          <SegmentedToggle options={BOUT_FORMAT_FILTER_OPTIONS} value={formatFilter} onChange={setFormatFilter} />
+          <SegmentedToggle options={TARGET_SCORE_FILTER_OPTIONS} value={targetFilter} onChange={setTargetFilter} />
+        </div>
+      </section>
+
       <section>
         <h2 className="mb-3 text-sm font-medium text-slate-500 dark:text-slate-400">Record</h2>
         {loading ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            <StatTile label="Bouts" value={stats.total_bouts} />
-            <StatTile
-              label="Win rate"
-              value={stats.win_rate_pct !== null ? `${stats.win_rate_pct}%` : '—'}
-            />
+            <StatTile label="Bouts" value={stats.total} />
+            <StatTile label="Win rate" value={stats.winRatePct !== null ? `${stats.winRatePct}%` : '—'} />
             <StatTile label="Wins" value={stats.wins} />
             <StatTile label="Losses" value={stats.losses} />
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-medium text-slate-500 dark:text-slate-400">Touches</h2>
+        {!loading && (
+          <div className="grid grid-cols-3 gap-3">
+            <StatTile label="Avg scored" value={stats.avgScored ?? '—'} />
+            <StatTile label="Avg conceded" value={stats.avgConceded ?? '—'} />
+            <StatTile label="Avg margin" value={stats.avgMargin !== null ? (stats.avgMargin > 0 ? `+${stats.avgMargin}` : stats.avgMargin) : '—'} />
           </div>
         )}
       </section>

@@ -84,7 +84,7 @@ Design principles: UUID PKs, `user_id` FK on every user-owned table (so a future
 
 Full DDL: [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), plus [`0002_add_bout_format.sql`](supabase/migrations/0002_add_bout_format.sql) (`bout_format`: `free | timed`) and [`0003_add_target_score.sql`](supabase/migrations/0003_add_target_score.sql) (`target_score`: `5 | 10 | 15`, the point target the bout was fenced to).
 
-Tables: `profiles` (1:1 with `auth.users`, auto-created via trigger on signup), `opponents` (user-owned), `bouts` (user-owned, FK to `opponents`), plus a `bout_stats` view (`security_invoker = true`, so it stays RLS-scoped) for win/loss/win-rate aggregation.
+Tables: `profiles` (1:1 with `auth.users`, auto-created via trigger on signup), `opponents` (user-owned), `bouts` (user-owned, FK to `opponents`). A `bout_stats` view (`security_invoker = true`) exists in the migration history for a simple DB-side aggregate, but the app itself now computes all stats client-side (`src/lib/boutStats.ts`) over the already-fetched `bouts` array, since that's what makes the filtered analytics (by opponent/format/target score) possible without a parameterized view.
 
 This schema already supports the deferred features with no migration needed: head-to-head = `group by opponent_id`, trends = `order by bout_date`, calendar = `group by bout_date`.
 
@@ -104,8 +104,8 @@ This schema already supports the deferred features with no migration needed: hea
 | `/login` | Login/Signup | Unprotected entry point |
 | `/` | **Quick Log Bout (home)** | Speed-optimized bout entry — opens first after login |
 | `/history` | Bout History | Reverse-chronological list, tap to edit a mistake |
-| `/opponents` | Opponents | Add opponents; simple list (no delete in v1) |
-| `/stats` | Stats & Profile | Win/loss/win-rate from `bout_stats`; display-name edit folded in here |
+| `/opponents` | Opponents | Add opponents; each row shows head-to-head record + recent-form dots, tap to expand the last 5 bouts against them (no delete in v1) |
+| `/stats` | Stats & Profile | Filterable record (by opponent, match format, target score), touches scored/conceded/margin, recent-form dots, and display-name edit |
 
 Bottom tab bar nav (Log / History / Opponents / Stats), thumb-reachable, hidden on `/login`.
 
@@ -163,6 +163,6 @@ Deliberately flat — no `features/` folders, no barrel files, no extra service 
 2. **Opponents**: add one via `/opponents`; confirm the row and its `user_id` in the table editor.
 3. **Log a bout end-to-end**: from `/`, log a bout by feel; confirm it appears at the top of `/history` and the raw row (`fencer_score`, `opponent_score`, `bout_date`, `weapon`) is correct.
 4. **RLS isolation**: create a second throwaway account, log a bout as that user, confirm the first account never sees it and vice versa.
-5. **Stats correctness**: manually tally a handful of bouts and compare against `/stats` and `select * from bout_stats where user_id = '<uid>';`.
+5. **Stats correctness**: manually tally a handful of bouts (overall and filtered by a specific opponent/format/target score) and compare against `/stats`.
 6. **PWA install**: `npm run build && npm run preview`, open on a phone, confirm "Add to Home Screen," install, relaunch standalone (no browser chrome).
 7. **Deploy**: connect repo to Vercel, set env vars, build command `npm run build`, output `dist`; re-run steps 1–6 against the deployed URL.

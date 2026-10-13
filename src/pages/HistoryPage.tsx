@@ -4,14 +4,7 @@ import type { Bout } from '../hooks/useBouts'
 import { ScoreStepper } from '../components/ScoreStepper'
 import { SegmentedToggle } from '../components/SegmentedToggle'
 import { BOUT_FORMAT_OPTIONS, TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
-
-function formatDate(iso: string) {
-  return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
+import { formatDate } from '../lib/formatDate'
 
 function EditForm({ bout, onClose }: { bout: Bout; onClose: () => void }) {
   const { updateBout, deleteBout } = useBouts()
