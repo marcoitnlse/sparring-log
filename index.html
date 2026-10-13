@@ -10,6 +10,27 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Temporary debug aid: surfaces otherwise-silent JS errors on screen,
+      // since there's no devtools access while diagnosing on a phone.
+      function showBootError(message) {
+        var el = document.getElementById('boot-error')
+        if (!el) {
+          el = document.createElement('pre')
+          el.id = 'boot-error'
+          el.style.cssText =
+            'position:fixed;inset:0;margin:0;padding:16px;background:#fff3f3;color:#900;font:12px monospace;white-space:pre-wrap;overflow:auto;z-index:99999;'
+          document.body.appendChild(el)
+        }
+        el.textContent += message + '\n\n'
+      }
+      window.addEventListener('error', function (e) {
+        showBootError('Error: ' + e.message + '\n' + (e.error && e.error.stack || ''))
+      })
+      window.addEventListener('unhandledrejection', function (e) {
+        showBootError('Unhandled rejection: ' + (e.reason && (e.reason.stack || e.reason.message || e.reason)))
+      })
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

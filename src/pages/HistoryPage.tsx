@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useBouts } from '../hooks/useBouts'
 import type { Bout } from '../hooks/useBouts'
 import { ScoreStepper } from '../components/ScoreStepper'
+import { MatchFormatToggle } from '../components/MatchFormatToggle'
 
 function formatDate(iso: string) {
   return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, {
@@ -12,12 +13,14 @@ function formatDate(iso: string) {
 }
 
 function EditForm({ bout, onClose }: { bout: Bout; onClose: () => void }) {
-  const { updateBout } = useBouts()
+  const { updateBout, deleteBout } = useBouts()
   const [fencerScore, setFencerScore] = useState(bout.fencer_score)
   const [opponentScore, setOpponentScore] = useState(bout.opponent_score)
   const [boutDate, setBoutDate] = useState(bout.bout_date)
+  const [boutFormat, setBoutFormat] = useState(bout.bout_format)
   const [notes, setNotes] = useState(bout.notes ?? '')
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   async function handleSave() {
     setSaving(true)
@@ -26,6 +29,7 @@ function EditForm({ bout, onClose }: { bout: Bout; onClose: () => void }) {
         fencerScore,
         opponentScore,
         boutDate,
+        boutFormat,
         notes: notes.trim() || undefined,
       })
       onClose()
@@ -34,11 +38,25 @@ function EditForm({ bout, onClose }: { bout: Bout; onClose: () => void }) {
     }
   }
 
+  async function handleDelete() {
+    if (!window.confirm('Delete this bout? This cannot be undone.')) return
+    setDeleting(true)
+    try {
+      await deleteBout(bout.id)
+      onClose()
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className="space-y-4 border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
       <div className="flex items-center justify-center gap-8">
         <ScoreStepper label="You" value={fencerScore} onChange={setFencerScore} />
         <ScoreStepper label="Opponent" value={opponentScore} onChange={setOpponentScore} />
+      </div>
+      <div className="flex justify-center">
+        <MatchFormatToggle value={boutFormat} onChange={setBoutFormat} />
       </div>
       <input
         type="date"
@@ -70,6 +88,14 @@ function EditForm({ bout, onClose }: { bout: Bout; onClose: () => void }) {
           Cancel
         </button>
       </div>
+      <button
+        type="button"
+        onClick={handleDelete}
+        disabled={deleting}
+        className="w-full rounded-lg py-2 text-sm font-medium text-red-600 disabled:opacity-50 dark:text-red-400"
+      >
+        {deleting ? 'Deleting…' : 'Delete bout'}
+      </button>
     </div>
   )
 }
@@ -104,7 +130,9 @@ export function HistoryPage() {
             >
               <div>
                 <p className="font-medium text-slate-900 dark:text-slate-100">{bout.opponent_name}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{formatDate(bout.bout_date)}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {formatDate(bout.bout_date)} · {bout.bout_format === 'free' ? 'Free time' : 'Timed match'}
+                </p>
               </div>
               <div className="flex items-center gap-3">
                 <span

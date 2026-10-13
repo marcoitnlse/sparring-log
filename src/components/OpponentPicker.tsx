@@ -5,12 +5,12 @@ interface OpponentPickerProps {
   opponents: Opponent[]
   recentOpponents: Opponent[]
   selected: Opponent | null
-  onSelect: (opponent: Opponent) => void
+  onSelect: (opponent: Opponent | null) => void
   onCreate: (name: string) => Promise<Opponent>
 }
 
 export function OpponentPicker({ opponents, recentOpponents, selected, onSelect, onCreate }: OpponentPickerProps) {
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(selected?.name ?? '')
   const [creating, setCreating] = useState(false)
 
   const filtered = useMemo(() => {
@@ -31,7 +31,7 @@ export function OpponentPicker({ opponents, recentOpponents, selected, onSelect,
     try {
       const opponent = await onCreate(name)
       onSelect(opponent)
-      setQuery('')
+      setQuery(opponent.name)
     } finally {
       setCreating(false)
     }
@@ -39,7 +39,16 @@ export function OpponentPicker({ opponents, recentOpponents, selected, onSelect,
 
   function handleSelect(opponent: Opponent) {
     onSelect(opponent)
-    setQuery('')
+    setQuery(opponent.name)
+  }
+
+  function handleFocus() {
+    // Re-opening a confirmed selection to change it: clear it so the field
+    // starts blank instead of re-snapping back to the old name as it's edited.
+    if (selected) {
+      onSelect(null)
+      setQuery('')
+    }
   }
 
   return (
@@ -48,8 +57,8 @@ export function OpponentPicker({ opponents, recentOpponents, selected, onSelect,
         type="text"
         autoFocus
         placeholder="Who did you fence?"
-        value={selected && !query ? selected.name : query}
-        onFocus={() => setQuery(selected && !query ? '' : query)}
+        value={query}
+        onFocus={handleFocus}
         onChange={(e) => setQuery(e.target.value)}
         className="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
       />

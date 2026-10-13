@@ -4,6 +4,8 @@ import { useBouts } from '../hooks/useBouts'
 import type { Opponent } from '../hooks/useOpponents'
 import { OpponentPicker } from '../components/OpponentPicker'
 import { ScoreStepper } from '../components/ScoreStepper'
+import { MatchFormatToggle } from '../components/MatchFormatToggle'
+import type { BoutFormat } from '../types/database'
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10)
@@ -17,6 +19,7 @@ export function QuickLogPage() {
   const [fencerScore, setFencerScore] = useState(0)
   const [opponentScore, setOpponentScore] = useState(0)
   const [boutDate, setBoutDate] = useState(todayIso())
+  const [boutFormat, setBoutFormat] = useState<BoutFormat>('timed')
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
   const [notes, setNotes] = useState('')
@@ -46,6 +49,7 @@ export function QuickLogPage() {
         fencerScore,
         opponentScore,
         boutDate,
+        boutFormat,
         notes: notes.trim() || undefined,
       })
       setToast(`Bout logged: ${fencerScore}–${opponentScore} vs. ${selected.name}`)
@@ -108,6 +112,10 @@ export function QuickLogPage() {
             {boutDate === todayIso() ? 'Today' : boutDate}
           </button>
         )}
+      </section>
+
+      <section>
+        <MatchFormatToggle value={boutFormat} onChange={setBoutFormat} />
       </section>
 
       <section>

@@ -3,6 +3,7 @@
 //   npx supabase gen types typescript --project-id <id> > src/types/database.ts
 
 export type Weapon = 'epee' | 'foil' | 'sabre'
+export type BoutFormat = 'free' | 'timed'
 
 export interface Database {
   public: {
@@ -55,6 +56,7 @@ export interface Database {
           user_id: string
           opponent_id: string
           weapon: Weapon
+          bout_format: BoutFormat
           fencer_score: number
           opponent_score: number
           bout_date: string
@@ -66,6 +68,7 @@ export interface Database {
           user_id: string
           opponent_id: string
           weapon?: Weapon
+          bout_format?: BoutFormat
           fencer_score: number
           opponent_score: number
           bout_date?: string
@@ -77,6 +80,7 @@ export interface Database {
           user_id?: string
           opponent_id?: string
           weapon?: Weapon
+          bout_format?: BoutFormat
           fencer_score?: number
           opponent_score?: number
           bout_date?: string

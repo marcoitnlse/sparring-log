@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from './useAuth'
-import type { Database, Weapon } from '../types/database'
+import type { BoutFormat, Database, Weapon } from '../types/database'
 
 type BoutRow = Database['public']['Tables']['bouts']['Row']
 export type Bout = BoutRow & { opponent_name: string }
@@ -12,6 +12,7 @@ interface CreateBoutInput {
   opponentScore: number
   boutDate: string
   weapon?: Weapon
+  boutFormat?: BoutFormat
   notes?: string
 }
 
@@ -60,6 +61,7 @@ export function useBouts() {
           opponent_score: input.opponentScore,
           bout_date: input.boutDate,
           weapon: input.weapon ?? 'epee',
+          bout_format: input.boutFormat ?? 'timed',
           notes: input.notes ?? null,
         })
         .select('*, opponents(name)')
@@ -89,6 +91,7 @@ export function useBouts() {
           ...(patch.opponentScore !== undefined && { opponent_score: patch.opponentScore }),
           ...(patch.boutDate !== undefined && { bout_date: patch.boutDate }),
           ...(patch.weapon !== undefined && { weapon: patch.weapon }),
+          ...(patch.boutFormat !== undefined && { bout_format: patch.boutFormat }),
           ...(patch.notes !== undefined && { notes: patch.notes }),
         })
         .eq('id', id)
@@ -104,5 +107,11 @@ export function useBouts() {
     [],
   )
 
-  return { bouts, loading, error, createBout, updateBout, refetch }
+  const deleteBout = useCallback(async (id: string) => {
+    const { error } = await supabase.from('bouts').delete().eq('id', id)
+    if (error) throw error
+    setBouts((prev) => prev.filter((b) => b.id !== id))
+  }, [])
+
+  return { bouts, loading, error, createBout, updateBout, deleteBout, refetch }
 }
