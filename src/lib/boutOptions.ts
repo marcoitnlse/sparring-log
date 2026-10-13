@@ -10,3 +10,16 @@ export const TARGET_SCORE_OPTIONS: readonly { value: TargetScore; label: string 
   { value: 10, label: 'To 10' },
   { value: 15, label: 'To 15' },
 ]
+
+export type BoutFormatFilter = BoutFormat | 'all'
+export type TargetScoreFilter = TargetScore | 'all'
+
+export const BOUT_FORMAT_FILTER_OPTIONS: readonly { value: BoutFormatFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  ...BOUT_FORMAT_OPTIONS,
+]
+
+export const TARGET_SCORE_FILTER_OPTIONS: readonly { value: TargetScoreFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  ...TARGET_SCORE_OPTIONS,
+]
