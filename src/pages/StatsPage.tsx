@@ -12,6 +12,7 @@ import {
   type BoutFormatFilter,
   type TargetScoreFilter,
 } from '../lib/boutOptions'
+import { HANDEDNESS_FILTER_OPTIONS, type HandednessFilter } from '../lib/opponentOptions'
 
 function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
@@ -83,6 +84,7 @@ export function StatsPage() {
   const [opponentFilter, setOpponentFilter] = useState<string>('all')
   const [formatFilter, setFormatFilter] = useState<BoutFormatFilter>('all')
   const [targetFilter, setTargetFilter] = useState<TargetScoreFilter>('all')
+  const [handednessFilter, setHandednessFilter] = useState<HandednessFilter>('all')
 
   const filteredBouts = useMemo(
     () =>
@@ -90,9 +92,10 @@ export function StatsPage() {
         (b) =>
           (opponentFilter === 'all' || b.opponent_id === opponentFilter) &&
           (formatFilter === 'all' || b.bout_format === formatFilter) &&
-          (targetFilter === 'all' || b.target_score === targetFilter),
+          (targetFilter === 'all' || b.target_score === targetFilter) &&
+          (handednessFilter === 'all' || b.opponent_handedness === handednessFilter),
       ),
-    [bouts, opponentFilter, formatFilter, targetFilter],
+    [bouts, opponentFilter, formatFilter, targetFilter, handednessFilter],
   )
 
   const stats = useMemo(() => computeBoutStats(filteredBouts), [filteredBouts])
@@ -116,6 +119,11 @@ export function StatsPage() {
           </select>
           <SegmentedToggle options={BOUT_FORMAT_FILTER_OPTIONS} value={formatFilter} onChange={setFormatFilter} />
           <SegmentedToggle options={TARGET_SCORE_FILTER_OPTIONS} value={targetFilter} onChange={setTargetFilter} />
+          <SegmentedToggle
+            options={HANDEDNESS_FILTER_OPTIONS}
+            value={handednessFilter}
+            onChange={setHandednessFilter}
+          />
         </div>
       </section>
 

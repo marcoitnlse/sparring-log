@@ -5,6 +5,7 @@
 export type Weapon = 'epee' | 'foil' | 'sabre'
 export type BoutFormat = 'free' | 'timed'
 export type TargetScore = 5 | 10 | 15
+export type Handedness = 'left' | 'right'
 
 export interface Database {
   public: {
@@ -32,6 +33,7 @@ export interface Database {
           id: string
           user_id: string
           name: string
+          handedness: Handedness | null
           notes: string | null
           created_at: string
         }
@@ -39,6 +41,7 @@ export interface Database {
           id?: string
           user_id: string
           name: string
+          handedness?: Handedness | null
           notes?: string | null
           created_at?: string
         }
@@ -46,6 +49,7 @@ export interface Database {
           id?: string
           user_id?: string
           name?: string
+          handedness?: Handedness | null
           notes?: string | null
           created_at?: string
         }

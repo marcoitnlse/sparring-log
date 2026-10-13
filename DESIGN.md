@@ -82,7 +82,9 @@ This is additive: no existing table is restructured, no existing policy removed,
 
 Design principles: UUID PKs, `user_id` FK on every user-owned table (so a future `club_id` + membership policy is additive), RLS on from day one, `weapon` constrained to `epee | foil | sabre` (UI only exposes épée now, so adding weapons later is UI-only), `bout_date` as a plain `date` so a future calendar/heatmap view groups by day with no timezone issues.
 
-Full DDL: [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), plus [`0002_add_bout_format.sql`](supabase/migrations/0002_add_bout_format.sql) (`bout_format`: `free | timed`) and [`0003_add_target_score.sql`](supabase/migrations/0003_add_target_score.sql) (`target_score`: `5 | 10 | 15`, the point target the bout was fenced to).
+Full DDL: [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), plus [`0002_add_bout_format.sql`](supabase/migrations/0002_add_bout_format.sql) (`bout_format`: `free | timed`), [`0003_add_target_score.sql`](supabase/migrations/0003_add_target_score.sql) (`target_score`: `5 | 10 | 15`), and [`0004_add_opponent_handedness.sql`](supabase/migrations/0004_add_opponent_handedness.sql) (`opponents.handedness`: `left | right | null` — nullable since we don't want to assume a handedness for opponents it's never been set for).
+
+Opponents can now be edited (name, handedness) and deleted. Deleting is still backstopped by `opponent_id ... on delete restrict` on `bouts` — if an opponent has logged bouts, deletion is rejected and the UI surfaces a friendly message asking you to delete those bouts first, rather than silently cascading away bout history.
 
 Tables: `profiles` (1:1 with `auth.users`, auto-created via trigger on signup), `opponents` (user-owned), `bouts` (user-owned, FK to `opponents`). A `bout_stats` view (`security_invoker = true`) exists in the migration history for a simple DB-side aggregate, but the app itself now computes all stats client-side (`src/lib/boutStats.ts`) over the already-fetched `bouts` array, since that's what makes the filtered analytics (by opponent/format/target score) possible without a parameterized view.
 
@@ -104,8 +106,8 @@ This schema already supports the deferred features with no migration needed: hea
 | `/login` | Login/Signup | Unprotected entry point |
 | `/` | **Quick Log Bout (home)** | Speed-optimized bout entry — opens first after login |
 | `/history` | Bout History | Reverse-chronological list, tap to edit a mistake |
-| `/opponents` | Opponents | Add opponents; each row shows head-to-head record + recent-form dots, tap to expand the last 5 bouts against them (no delete in v1) |
-| `/stats` | Stats & Profile | Filterable record (by opponent, match format, target score), touches scored/conceded/margin, recent-form dots, and display-name edit |
+| `/opponents` | Opponents | Add/edit/delete opponents (name, handedness); each row shows head-to-head record + recent-form dots, tap to expand the last 5 bouts against them |
+| `/stats` | Stats & Profile | Filterable record (by opponent, match format, target score, opponent handedness), touches scored/conceded/margin, and display-name edit |
 
 Bottom tab bar nav (Log / History / Opponents / Stats), thumb-reachable, hidden on `/login`.
 
