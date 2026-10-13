@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from './useAuth'
-import type { BoutFormat, Database, TargetScore, Weapon } from '../types/database'
+import type { BoutFormat, Database, Handedness, TargetScore, Weapon } from '../types/database'
 
 type BoutRow = Database['public']['Tables']['bouts']['Row']
-export type Bout = BoutRow & { opponent_name: string }
+type OpponentJoin = { name: string; handedness: Handedness | null } | null
+export type Bout = BoutRow & { opponent_name: string; opponent_handedness: Handedness | null }
 
 interface CreateBoutInput {
   opponentId: string
@@ -15,6 +16,15 @@ interface CreateBoutInput {
   boutFormat?: BoutFormat
   targetScore?: TargetScore
   notes?: string
+}
+
+function toBout(row: BoutRow & { opponents: OpponentJoin }): Bout {
+  const { opponents, ...bout } = row
+  return {
+    ...bout,
+    opponent_name: opponents?.name ?? 'Unknown',
+    opponent_handedness: opponents?.handedness ?? null,
+  }
 }
 
 export function useBouts() {
@@ -28,19 +38,14 @@ export function useBouts() {
     setLoading(true)
     const { data, error } = await supabase
       .from('bouts')
-      .select('*, opponents(name)')
+      .select('*, opponents(name, handedness)')
       .order('bout_date', { ascending: false })
       .order('created_at', { ascending: false })
 
     if (error) {
       setError(error.message)
     } else {
-      setBouts(
-        data.map((row) => {
-          const { opponents, ...bout } = row as BoutRow & { opponents: { name: string } | null }
-          return { ...bout, opponent_name: opponents?.name ?? 'Unknown' }
-        }),
-      )
+      setBouts(data.map((row) => toBout(row as BoutRow & { opponents: OpponentJoin })))
       setError(null)
     }
     setLoading(false)
@@ -66,12 +71,11 @@ export function useBouts() {
           target_score: input.targetScore ?? 15,
           notes: input.notes ?? null,
         })
-        .select('*, opponents(name)')
+        .select('*, opponents(name, handedness)')
         .single()
 
       if (error) throw error
-      const { opponents, ...bout } = data as BoutRow & { opponents: { name: string } | null }
-      const newBout: Bout = { ...bout, opponent_name: opponents?.name ?? 'Unknown' }
+      const newBout = toBout(data as BoutRow & { opponents: OpponentJoin })
       setBouts((prev) =>
         [newBout, ...prev].sort(
           (a, b) =>
@@ -98,12 +102,11 @@ export function useBouts() {
           ...(patch.notes !== undefined && { notes: patch.notes }),
         })
         .eq('id', id)
-        .select('*, opponents(name)')
+        .select('*, opponents(name, handedness)')
         .single()
 
       if (error) throw error
-      const { opponents, ...bout } = data as BoutRow & { opponents: { name: string } | null }
-      const updated: Bout = { ...bout, opponent_name: opponents?.name ?? 'Unknown' }
+      const updated = toBout(data as BoutRow & { opponents: OpponentJoin })
       setBouts((prev) => prev.map((b) => (b.id === id ? updated : b)))
       return updated
     },
