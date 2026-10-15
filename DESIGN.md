@@ -78,6 +78,8 @@ This is additive: no existing table is restructured, no existing policy removed,
 
 **Frontend scalability**: plain hooks are correct at 4 tables/5 screens. The upgrade trigger for TanStack Query (or similar) is when the number of screens that need to stay in sync after a mutation grows past what manual refetch-on-save can handle cleanly — a symptom threshold, not a size threshold.
 
+**History pagination**: `useBouts` fetches the *entire* bout table unconditionally — fine for Stats/Opponents, which genuinely need the full set for correct aggregates, but not something the History screen should do once that table reaches the hundreds. `useBoutHistory` (a separate hook, not a mode flag on `useBouts`) paginates instead: it fetches a floor of `PAGE_SIZE` (20) bouts via a date cursor (`bout_date <` the previous page's oldest date — not numeric offset, so a page boundary can't silently shift if a new bout is logged mid-browse), then runs one small follow-up query for any other bouts sharing that exact boundary date and merges them in. The 20 is a floor, not a cap: a page boundary only ever falls *between* two dates, never splits a single training day's bouts across two "Load more" taps. Both hooks share the actual Supabase calls via `src/lib/boutsApi.ts` (fetch/insert/update/delete + the `opponents` join mapping) rather than duplicating that logic.
+
 ## Database Schema
 
 Design principles: UUID PKs, `user_id` FK on every user-owned table (so a future `club_id` + membership policy is additive), RLS on from day one, `weapon` constrained to `epee | foil | sabre` (UI only exposes épée now, so adding weapons later is UI-only), `bout_date` as a plain `date` so a future calendar/heatmap view groups by day with no timezone issues.
@@ -105,7 +107,7 @@ This schema already supports the deferred features with no migration needed: hea
 |---|---|---|
 | `/login` | Login/Signup | Unprotected entry point |
 | `/` | **Quick Log Bout (home)** | Speed-optimized bout entry — opens first after login |
-| `/history` | Bout History | Reverse-chronological list, tap to edit a mistake |
+| `/history` | Bout History | Date-grouped, paginated ("Load more") list, tap a bout to edit or delete it |
 | `/opponents` | Opponents | Add (collapsed behind a button)/edit/delete opponents (name, handedness); each row shows head-to-head record + recent-form dots, tap to expand the last 5 bouts against them |
 | `/stats` | Stats & Profile | Filterable record (by opponent, match format, target score, opponent handedness), touches scored/conceded/margin, and display-name edit |
 
@@ -137,7 +139,8 @@ fencingApp/
 │   ├── hooks/
 │   │   ├── useAuth.ts
 │   │   ├── useOpponents.ts
-│   │   └── useBouts.ts
+│   │   ├── useBouts.ts            # full list — Stats/Opponents aggregates
+│   │   └── useBoutHistory.ts      # paginated — History screen only
 │   ├── components/
 │   │   ├── ProtectedRoute.tsx
 │   │   ├── NavBar.tsx

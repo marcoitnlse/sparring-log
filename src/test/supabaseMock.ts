@@ -14,7 +14,7 @@ export interface MockResult<T = unknown> {
  * (array or single object) the call site expects back. */
 export function createQueryBuilder<T>(result: MockResult<T>) {
   const builder: Record<string, unknown> = {}
-  for (const method of ['select', 'insert', 'update', 'delete', 'eq', 'order', 'single']) {
+  for (const method of ['select', 'insert', 'update', 'delete', 'eq', 'lt', 'order', 'limit', 'single']) {
     builder[method] = vi.fn(() => builder)
   }
   builder.then = (onFulfilled: (r: MockResult<T>) => unknown, onRejected?: (e: unknown) => unknown) =>
