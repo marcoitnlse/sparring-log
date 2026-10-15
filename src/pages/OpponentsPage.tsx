@@ -188,40 +188,43 @@ export function OpponentsPage() {
 
             return (
               <li key={o.id}>
-                <div className="flex items-center justify-between px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => hasBouts && setExpandedId(expandedId === o.id ? null : o.id)}
-                    disabled={!hasBouts}
-                    className="flex flex-1 items-center justify-between text-left active:bg-slate-100 disabled:active:bg-transparent dark:active:bg-slate-900"
-                  >
-                    <div>
-                      <p className="text-base text-slate-800 dark:text-slate-200">
-                        {o.name}
-                        {hand && (
-                          <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                            {hand}
-                          </span>
-                        )}
-                      </p>
-                      {hasBouts && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {stats.wins}–{stats.losses}
-                          {stats.draws > 0 ? `–${stats.draws}` : ''} · {stats.total}{' '}
-                          {stats.total === 1 ? 'bout' : 'bouts'}
-                        </p>
+                <div
+                  onClick={() => hasBouts && setExpandedId(expandedId === o.id ? null : o.id)}
+                  className={`flex items-center justify-between px-4 py-3 ${
+                    hasBouts ? 'active:bg-slate-100 dark:active:bg-slate-900' : ''
+                  }`}
+                >
+                  <div className="flex flex-col items-start gap-1">
+                    <p className="text-base text-slate-800 dark:text-slate-200">
+                      {o.name}
+                      {hand && (
+                        <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                          {hand}
+                        </span>
                       )}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingId(editingId === o.id ? null : o.id)
+                      }}
+                      aria-label={`Edit ${o.name}`}
+                      className="text-sm text-slate-500 underline underline-offset-2 dark:text-slate-400"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  {hasBouts && (
+                    <div className="flex flex-col items-end gap-1">
+                      <RecentFormDots outcomes={stats.recentForm} />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {stats.wins}–{stats.losses}
+                        {stats.draws > 0 ? `–${stats.draws}` : ''} · {stats.total}{' '}
+                        {stats.total === 1 ? 'bout' : 'bouts'}
+                      </p>
                     </div>
-                    {hasBouts && <RecentFormDots outcomes={stats.recentForm} />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditingId(editingId === o.id ? null : o.id)}
-                    aria-label={`Edit ${o.name}`}
-                    className="ml-3 shrink-0 text-sm text-slate-500 underline underline-offset-2 dark:text-slate-400"
-                  >
-                    Edit
-                  </button>
+                  )}
                 </div>
                 {editingId === o.id && (
                   <EditOpponentForm
