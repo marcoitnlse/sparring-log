@@ -4,7 +4,8 @@ import { useBouts } from '../hooks/useBouts'
 import { useScoreForm } from '../hooks/useScoreForm'
 import { ScoreStepper } from '../components/ScoreStepper'
 import { SegmentedToggle } from '../components/SegmentedToggle'
-import { BOUT_FORMAT_OPTIONS, TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
+import { BoutFormatPicker } from '../components/BoutFormatPicker'
+import { TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
 import type { BoutFormat } from '../types/database'
 
 function todayIso() {
@@ -125,7 +126,7 @@ export function QuickLogPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <SegmentedToggle options={BOUT_FORMAT_OPTIONS} value={boutFormat} onChange={setBoutFormat} />
+        <BoutFormatPicker value={boutFormat} onChange={setBoutFormat} />
         <SegmentedToggle options={TARGET_SCORE_OPTIONS} value={scoreForm.targetScore} onChange={scoreForm.setTargetScore} />
       </section>
 

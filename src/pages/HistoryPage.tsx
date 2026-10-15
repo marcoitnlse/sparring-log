@@ -4,7 +4,8 @@ import { useScoreForm } from '../hooks/useScoreForm'
 import type { Bout } from '../lib/boutsApi'
 import { ScoreStepper } from '../components/ScoreStepper'
 import { SegmentedToggle } from '../components/SegmentedToggle'
-import { BOUT_FORMAT_OPTIONS, TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
+import { BoutFormatPicker } from '../components/BoutFormatPicker'
+import { BOUT_FORMAT_LABELS, TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
 import { formatDate } from '../lib/formatDate'
 
 interface EditFormProps {
@@ -73,7 +74,7 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
         </p>
       )}
       <div className="flex flex-col items-center gap-2">
-        <SegmentedToggle options={BOUT_FORMAT_OPTIONS} value={boutFormat} onChange={setBoutFormat} />
+        <BoutFormatPicker value={boutFormat} onChange={setBoutFormat} />
         <SegmentedToggle options={TARGET_SCORE_OPTIONS} value={scoreForm.targetScore} onChange={scoreForm.setTargetScore} />
       </div>
       <input
@@ -164,7 +165,7 @@ export function HistoryPage() {
                   <div>
                     <p className="font-medium text-slate-900 dark:text-slate-100">{bout.opponent_name}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {bout.bout_format === 'free' ? 'Free time' : 'Timed match'} · To {bout.target_score}
+                      {BOUT_FORMAT_LABELS[bout.bout_format]} · To {bout.target_score}
                     </p>
                   </div>
                   <span
