@@ -22,8 +22,19 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
   const [notes, setNotes] = useState(bout.notes ?? '')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showDrawError, setShowDrawError] = useState(false)
 
   const isDraw = fencerScore === opponentScore
+
+  function handleFencerScoreChange(value: number) {
+    setFencerScore(value)
+    setShowDrawError(false)
+  }
+
+  function handleOpponentScoreChange(value: number) {
+    setOpponentScore(value)
+    setShowDrawError(false)
+  }
 
   function handleTargetScoreChange(next: typeof targetScore) {
     setTargetScore(next)
@@ -32,7 +43,10 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
   }
 
   async function handleSave() {
-    if (isDraw) return
+    if (isDraw) {
+      setShowDrawError(true)
+      return
+    }
     setSaving(true)
     try {
       await onUpdate(bout.id, {
@@ -63,10 +77,10 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
   return (
     <div className="space-y-4 border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
       <div className="flex items-center justify-center gap-8">
-        <ScoreStepper label="You" value={fencerScore} onChange={setFencerScore} max={targetScore} />
-        <ScoreStepper label="Opponent" value={opponentScore} onChange={setOpponentScore} max={targetScore} />
+        <ScoreStepper label="You" value={fencerScore} onChange={handleFencerScoreChange} max={targetScore} />
+        <ScoreStepper label="Opponent" value={opponentScore} onChange={handleOpponentScoreChange} max={targetScore} />
       </div>
-      {isDraw && (
+      {showDrawError && isDraw && (
         <p className="text-center text-sm text-red-600 dark:text-red-400">
           Scores can't be equal — fencing resolves a tie with a sudden-death touch.
         </p>
@@ -92,7 +106,7 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
         <button
           type="button"
           onClick={handleSave}
-          disabled={saving || isDraw}
+          disabled={saving}
           className="flex-1 rounded-lg bg-slate-900 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
         >
           {saving ? 'Saving…' : 'Save changes'}

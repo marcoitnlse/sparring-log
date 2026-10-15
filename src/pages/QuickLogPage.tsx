@@ -25,8 +25,19 @@ export function QuickLogPage() {
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [showDrawError, setShowDrawError] = useState(false)
 
   const isDraw = fencerScore === opponentScore
+
+  function handleFencerScoreChange(value: number) {
+    setFencerScore(value)
+    setShowDrawError(false)
+  }
+
+  function handleOpponentScoreChange(value: number) {
+    setOpponentScore(value)
+    setShowDrawError(false)
+  }
 
   function handleTargetScoreChange(next: TargetScore) {
     setTargetScore(next)
@@ -36,7 +47,11 @@ export function QuickLogPage() {
 
   async function handleSave() {
     const selected = opponents.find((o) => o.id === opponentId)
-    if (!selected || saving || isDraw) return
+    if (!selected || saving) return
+    if (isDraw) {
+      setShowDrawError(true)
+      return
+    }
     setSaving(true)
     try {
       await createBout({
@@ -53,6 +68,7 @@ export function QuickLogPage() {
       // Keep the opponent selected — sparring is usually several bouts in a row.
       setFencerScore(0)
       setOpponentScore(0)
+      setShowDrawError(false)
       setNotes('')
       setShowNotes(false)
       setShowDatePicker(false)
@@ -89,12 +105,12 @@ export function QuickLogPage() {
       </section>
 
       <section className="flex items-center justify-center gap-8 rounded-xl bg-white py-6 shadow-sm dark:bg-slate-900">
-        <ScoreStepper label="You" value={fencerScore} onChange={setFencerScore} max={targetScore} />
+        <ScoreStepper label="You" value={fencerScore} onChange={handleFencerScoreChange} max={targetScore} />
         <span className="text-2xl font-light text-slate-300 dark:text-slate-700">–</span>
-        <ScoreStepper label="Opponent" value={opponentScore} onChange={setOpponentScore} max={targetScore} />
+        <ScoreStepper label="Opponent" value={opponentScore} onChange={handleOpponentScoreChange} max={targetScore} />
       </section>
 
-      {isDraw && (
+      {showDrawError && isDraw && (
         <p className="text-center text-sm text-red-600 dark:text-red-400">
           Scores can't be equal — fencing resolves a tie with a sudden-death touch.
         </p>
@@ -152,7 +168,7 @@ export function QuickLogPage() {
       <button
         type="button"
         onClick={handleSave}
-        disabled={!opponentId || saving || isDraw}
+        disabled={!opponentId || saving}
         className="fixed inset-x-4 bottom-20 rounded-xl bg-slate-900 py-4 text-lg font-semibold text-white shadow-lg disabled:opacity-40 dark:bg-slate-100 dark:text-slate-900"
       >
         {saving ? 'Saving…' : 'Save bout'}
