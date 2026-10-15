@@ -142,7 +142,8 @@ fencingApp/
 │   │   ├── ProtectedRoute.tsx
 │   │   ├── NavBar.tsx
 │   │   ├── ScoreStepper.tsx
-│   │   └── SegmentedToggle.tsx
+│   │   ├── SegmentedToggle.tsx
+│   │   └── RecentFormDots.tsx
 │   │   (plus a few small pure helpers under lib/: boutStats, boutOptions,
 │   │   opponentOptions, formatDate — see those files for the current list)
 │   ├── pages/

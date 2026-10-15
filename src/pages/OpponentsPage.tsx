@@ -174,7 +174,11 @@ export function OpponentsPage() {
           <SegmentedToggle options={HANDEDNESS_OPTIONS} value={newHandedness} onChange={setNewHandedness} />
           <button
             type="button"
-            onClick={() => setShowAddForm(false)}
+            onClick={() => {
+              setShowAddForm(false)
+              setName('')
+              setNewHandedness('right')
+            }}
             className="text-sm text-slate-500 underline underline-offset-2 dark:text-slate-400"
           >
             Cancel

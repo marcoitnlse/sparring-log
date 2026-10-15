@@ -12,7 +12,7 @@ function todayIso() {
 
 export function QuickLogPage() {
   const { opponents } = useOpponents()
-  const { createBout } = useBouts()
+  const { createBout } = useBouts({ skipInitialFetch: true })
 
   const [opponentId, setOpponentId] = useState('')
   const [fencerScore, setFencerScore] = useState(0)
