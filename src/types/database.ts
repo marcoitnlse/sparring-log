@@ -3,7 +3,7 @@
 //   npx supabase gen types typescript --project-id <id> > src/types/database.ts
 
 export type Weapon = 'epee' | 'foil' | 'sabre'
-export type BoutFormat = 'free' | 'timed'
+export type BoutFormat = 'free' | 'timed' | 'competition'
 export type TargetScore = 5 | 10 | 15
 export type Handedness = 'left' | 'right'
 

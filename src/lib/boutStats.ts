@@ -1,5 +1,6 @@
 import type { Bout } from '../hooks/useBouts'
 import type { BoutFormatFilter, TargetScoreFilter } from './boutOptions'
+import { categoryOfBoutFormat } from './boutOptions'
 import type { HandednessFilter } from './opponentOptions'
 
 export type BoutOutcome = 'win' | 'loss'
@@ -11,6 +12,12 @@ export interface BoutFilters {
   handedness: HandednessFilter
 }
 
+function matchesFormatFilter(bout: Bout, filter: BoutFormatFilter): boolean {
+  if (filter === 'all') return true
+  if (filter === 'training') return categoryOfBoutFormat(bout.bout_format) === 'training'
+  return bout.bout_format === filter
+}
+
 /** Narrows bouts down to whatever's currently selected on the Stats page —
  * each filter is "all" (no-op) or a specific value, combined with AND.
  * Pulled out of StatsPage and tested here since it's real logic (unlike
@@ -20,7 +27,7 @@ export function filterBouts(bouts: Bout[], filters: BoutFilters): Bout[] {
   return bouts.filter(
     (b) =>
       (filters.opponentId === 'all' || b.opponent_id === filters.opponentId) &&
-      (filters.format === 'all' || b.bout_format === filters.format) &&
+      matchesFormatFilter(b, filters.format) &&
       (filters.targetScore === 'all' || b.target_score === filters.targetScore) &&
       (filters.handedness === 'all' || b.opponent_handedness === filters.handedness),
   )

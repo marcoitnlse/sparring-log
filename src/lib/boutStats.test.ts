@@ -130,6 +130,13 @@ describe('filterBouts', () => {
     expect(filterBouts([free, timed], { ...allAll, format: 'timed' })).toEqual([timed])
   })
 
+  it('narrows by the "training" category, matching both free and timed but not competition', () => {
+    const free = makeBout({ bout_format: 'free' })
+    const timed = makeBout({ bout_format: 'timed' })
+    const competition = makeBout({ bout_format: 'competition' })
+    expect(filterBouts([free, timed, competition], { ...allAll, format: 'training' })).toEqual([free, timed])
+  })
+
   it('narrows by target score', () => {
     const to5 = makeBout({ target_score: 5 })
     const to15 = makeBout({ target_score: 15 })
