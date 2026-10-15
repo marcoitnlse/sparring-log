@@ -27,10 +27,17 @@ function toBout(row: BoutRow & { opponents: OpponentJoin }): Bout {
   }
 }
 
-export function useBouts() {
+interface UseBoutsOptions {
+  /** Skip the initial fetch of the full bout list — for callers that only
+   * need createBout/updateBout/deleteBout and never render `bouts`, so we
+   * don't pull the user's entire history just to log a new one. */
+  skipInitialFetch?: boolean
+}
+
+export function useBouts(options?: UseBoutsOptions) {
   const { session } = useAuth()
   const [bouts, setBouts] = useState<Bout[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!options?.skipInitialFetch)
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
@@ -52,8 +59,9 @@ export function useBouts() {
   }, [session])
 
   useEffect(() => {
+    if (options?.skipInitialFetch) return
     refetch()
-  }, [refetch])
+  }, [refetch, options?.skipInitialFetch])
 
   const createBout = useCallback(
     async (input: CreateBoutInput) => {

@@ -126,6 +126,7 @@ function EditOpponentForm({ opponent, onUpdate, onDelete, onClose }: EditOpponen
 export function OpponentsPage() {
   const { opponents, loading, error, createOpponent, updateOpponent, deleteOpponent } = useOpponents()
   const { bouts } = useBouts()
+  const [showAddForm, setShowAddForm] = useState(false)
   const [name, setName] = useState('')
   const [newHandedness, setNewHandedness] = useState<Handedness>('right')
   const [saving, setSaving] = useState(false)
@@ -143,6 +144,7 @@ export function OpponentsPage() {
       await createOpponent(trimmed, newHandedness)
       setName('')
       setNewHandedness('right')
+      setShowAddForm(false)
     } finally {
       setSaving(false)
     }
@@ -150,34 +152,54 @@ export function OpponentsPage() {
 
   return (
     <div className="p-4">
-      <form onSubmit={handleSubmit} className="mb-6 space-y-3">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="New opponent name"
-            className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-          />
+      {showAddForm ? (
+        <form onSubmit={handleSubmit} className="mb-6 space-y-3">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="New opponent name"
+              className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            />
+            <button
+              type="submit"
+              disabled={!name.trim() || saving}
+              className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
+            >
+              Add
+            </button>
+          </div>
+          <SegmentedToggle options={HANDEDNESS_OPTIONS} value={newHandedness} onChange={setNewHandedness} />
           <button
-            type="submit"
-            disabled={!name.trim() || saving}
-            className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
+            type="button"
+            onClick={() => {
+              setShowAddForm(false)
+              setName('')
+              setNewHandedness('right')
+            }}
+            className="text-sm text-slate-500 underline underline-offset-2 dark:text-slate-400"
           >
-            Add
+            Cancel
           </button>
-        </div>
-        <SegmentedToggle options={HANDEDNESS_OPTIONS} value={newHandedness} onChange={setNewHandedness} />
-      </form>
+        </form>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowAddForm(true)}
+          className="mb-6 w-full rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+        >
+          + Add opponent
+        </button>
+      )}
 
       {loading ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
       ) : error ? (
         <p className="text-sm text-red-600 dark:text-red-400">Couldn't load opponents: {error}</p>
       ) : opponents.length === 0 ? (
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          No opponents yet — add one above, or add one inline while logging a bout.
-        </p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">No opponents yet — add one above.</p>
       ) : (
         <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
           {opponents.map((o) => {
