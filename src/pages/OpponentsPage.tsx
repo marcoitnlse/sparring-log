@@ -219,7 +219,7 @@ export function OpponentsPage() {
                     <div className="flex flex-col items-end gap-1">
                       <RecentFormDots outcomes={stats.recentForm} />
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {stats.wins}–{stats.losses}
+                        W-L: {stats.wins}–{stats.losses}
                         {stats.draws > 0 ? `–${stats.draws}` : ''} · {stats.total}{' '}
                         {stats.total === 1 ? 'bout' : 'bouts'}
                       </p>
