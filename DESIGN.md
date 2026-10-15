@@ -106,7 +106,7 @@ This schema already supports the deferred features with no migration needed: hea
 | `/login` | Login/Signup | Unprotected entry point |
 | `/` | **Quick Log Bout (home)** | Speed-optimized bout entry — opens first after login |
 | `/history` | Bout History | Reverse-chronological list, tap to edit a mistake |
-| `/opponents` | Opponents | Add/edit/delete opponents (name, handedness); each row shows head-to-head record + recent-form dots, tap to expand the last 5 bouts against them |
+| `/opponents` | Opponents | Add (collapsed behind a button)/edit/delete opponents (name, handedness); each row shows head-to-head record + recent-form dots, tap to expand the last 5 bouts against them |
 | `/stats` | Stats & Profile | Filterable record (by opponent, match format, target score, opponent handedness), touches scored/conceded/margin, and display-name edit |
 
 Bottom tab bar nav (Log / History / Opponents / Stats), thumb-reachable, hidden on `/login`.
@@ -115,7 +115,7 @@ Bottom tab bar nav (Log / History / Opponents / Stats), thumb-reachable, hidden 
 
 Target: one-handed, ~10 seconds, right after a bout at the strip.
 
-1. **Opponent picker** at top — autofocused text input, with tappable chips for the 3–5 most-recently-faced opponents (derived client-side from already-fetched recent bouts). Typing filters the list live; no match shows an inline "+ Add '<name>'" chip that creates and selects the opponent in one tap.
+1. **Opponent** at top — a plain dropdown (`<select>`) of existing opponents. Opponent management (adding new ones, setting handedness) now lives entirely on the Opponents tab; quick-log only picks from who's already there.
 2. **Score entry** — two large side-by-side steppers ("You" / "Opponent"), `inputmode="numeric"`, big ≥44px +/− targets, default 0–0.
 3. **Date** — defaults to today, shown small/collapsed; tap opens a native date input only when backdating is needed.
 4. **Weapon** — single-option segmented control pre-selected to "Épée," present but requiring zero interaction normally.
@@ -137,13 +137,14 @@ fencingApp/
 │   ├── hooks/
 │   │   ├── useAuth.ts
 │   │   ├── useOpponents.ts
-│   │   ├── useBouts.ts
-│   │   └── useStats.ts
+│   │   └── useBouts.ts
 │   ├── components/
 │   │   ├── ProtectedRoute.tsx
 │   │   ├── NavBar.tsx
 │   │   ├── ScoreStepper.tsx
-│   │   └── OpponentPicker.tsx
+│   │   └── SegmentedToggle.tsx
+│   │   (plus a few small pure helpers under lib/: boutStats, boutOptions,
+│   │   opponentOptions, formatDate — see those files for the current list)
 │   ├── pages/
 │   │   ├── LoginPage.tsx
 │   │   ├── QuickLogPage.tsx      # home "/"

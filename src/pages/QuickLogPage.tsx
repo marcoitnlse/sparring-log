@@ -1,8 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useOpponents } from '../hooks/useOpponents'
 import { useBouts } from '../hooks/useBouts'
-import type { Opponent } from '../hooks/useOpponents'
-import { OpponentPicker } from '../components/OpponentPicker'
 import { ScoreStepper } from '../components/ScoreStepper'
 import { SegmentedToggle } from '../components/SegmentedToggle'
 import { BOUT_FORMAT_OPTIONS, TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
@@ -13,10 +11,10 @@ function todayIso() {
 }
 
 export function QuickLogPage() {
-  const { opponents, createOpponent } = useOpponents()
-  const { bouts, createBout } = useBouts()
+  const { opponents } = useOpponents()
+  const { createBout } = useBouts()
 
-  const [selected, setSelected] = useState<Opponent | null>(null)
+  const [opponentId, setOpponentId] = useState('')
   const [fencerScore, setFencerScore] = useState(0)
   const [opponentScore, setOpponentScore] = useState(0)
   const [boutDate, setBoutDate] = useState(todayIso())
@@ -28,21 +26,8 @@ export function QuickLogPage() {
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
-  const recentOpponents = useMemo(() => {
-    const seen = new Set<string>()
-    const recent: Opponent[] = []
-    for (const bout of bouts) {
-      if (seen.has(bout.opponent_id)) continue
-      const opponent = opponents.find((o) => o.id === bout.opponent_id)
-      if (!opponent) continue
-      seen.add(bout.opponent_id)
-      recent.push(opponent)
-      if (recent.length === 5) break
-    }
-    return recent
-  }, [bouts, opponents])
-
   async function handleSave() {
+    const selected = opponents.find((o) => o.id === opponentId)
     if (!selected || saving) return
     setSaving(true)
     try {
@@ -79,13 +64,20 @@ export function QuickLogPage() {
 
       <section>
         <h2 className="mb-2 text-sm font-medium text-slate-500 dark:text-slate-400">Opponent</h2>
-        <OpponentPicker
-          opponents={opponents}
-          recentOpponents={recentOpponents}
-          selected={selected}
-          onSelect={setSelected}
-          onCreate={(name) => createOpponent(name)}
-        />
+        <select
+          value={opponentId}
+          onChange={(e) => setOpponentId(e.target.value)}
+          className="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+        >
+          <option value="" disabled>
+            Who did you fence?
+          </option>
+          {opponents.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.name}
+            </option>
+          ))}
+        </select>
       </section>
 
       <section className="flex items-center justify-center gap-8 rounded-xl bg-white py-6 shadow-sm dark:bg-slate-900">
@@ -146,7 +138,7 @@ export function QuickLogPage() {
       <button
         type="button"
         onClick={handleSave}
-        disabled={!selected || saving}
+        disabled={!opponentId || saving}
         className="fixed inset-x-4 bottom-20 rounded-xl bg-slate-900 py-4 text-lg font-semibold text-white shadow-lg disabled:opacity-40 dark:bg-slate-100 dark:text-slate-900"
       >
         {saving ? 'Saving…' : 'Save bout'}
