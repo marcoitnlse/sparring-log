@@ -78,7 +78,7 @@ export async function insertBout(userId: string, input: CreateBoutInput): Promis
       opponent_score: input.opponentScore,
       bout_date: input.boutDate,
       weapon: input.weapon ?? 'epee',
-      bout_format: input.boutFormat ?? 'timed',
+      bout_format: input.boutFormat ?? 'free',
       target_score: input.targetScore ?? 15,
       notes: input.notes ?? null,
     })

@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useOpponents } from '../hooks/useOpponents'
 import { useBouts } from '../hooks/useBouts'
+import { useScoreForm } from '../hooks/useScoreForm'
 import { ScoreStepper } from '../components/ScoreStepper'
 import { SegmentedToggle } from '../components/SegmentedToggle'
 import { BOUT_FORMAT_OPTIONS, TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
-import type { BoutFormat, TargetScore } from '../types/database'
+import type { BoutFormat } from '../types/database'
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10)
@@ -13,13 +14,11 @@ function todayIso() {
 export function QuickLogPage() {
   const { opponents } = useOpponents()
   const { createBout } = useBouts({ skipInitialFetch: true })
+  const scoreForm = useScoreForm(0, 0, 15)
 
   const [opponentId, setOpponentId] = useState('')
-  const [fencerScore, setFencerScore] = useState(0)
-  const [opponentScore, setOpponentScore] = useState(0)
   const [boutDate, setBoutDate] = useState(todayIso())
-  const [boutFormat, setBoutFormat] = useState<BoutFormat>('timed')
-  const [targetScore, setTargetScore] = useState<TargetScore>(15)
+  const [boutFormat, setBoutFormat] = useState<BoutFormat>('free')
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
   const [notes, setNotes] = useState('')
@@ -29,22 +28,22 @@ export function QuickLogPage() {
   async function handleSave() {
     const selected = opponents.find((o) => o.id === opponentId)
     if (!selected || saving) return
+    if (!scoreForm.checkCanSave()) return
     setSaving(true)
     try {
       await createBout({
         opponentId: selected.id,
-        fencerScore,
-        opponentScore,
+        fencerScore: scoreForm.fencerScore,
+        opponentScore: scoreForm.opponentScore,
         boutDate,
         boutFormat,
-        targetScore,
+        targetScore: scoreForm.targetScore,
         notes: notes.trim() || undefined,
       })
-      setToast(`Bout logged: ${fencerScore}–${opponentScore} vs. ${selected.name}`)
+      setToast(`Bout logged: ${scoreForm.fencerScore}–${scoreForm.opponentScore} vs. ${selected.name}`)
       setTimeout(() => setToast(null), 2500)
       // Keep the opponent selected — sparring is usually several bouts in a row.
-      setFencerScore(0)
-      setOpponentScore(0)
+      scoreForm.resetScores(0, 0)
       setNotes('')
       setShowNotes(false)
       setShowDatePicker(false)
@@ -81,10 +80,26 @@ export function QuickLogPage() {
       </section>
 
       <section className="flex items-center justify-center gap-8 rounded-xl bg-white py-6 shadow-sm dark:bg-slate-900">
-        <ScoreStepper label="You" value={fencerScore} onChange={setFencerScore} />
+        <ScoreStepper
+          label="You"
+          value={scoreForm.fencerScore}
+          onChange={scoreForm.setFencerScore}
+          max={scoreForm.targetScore}
+        />
         <span className="text-2xl font-light text-slate-300 dark:text-slate-700">–</span>
-        <ScoreStepper label="Opponent" value={opponentScore} onChange={setOpponentScore} />
+        <ScoreStepper
+          label="Opponent"
+          value={scoreForm.opponentScore}
+          onChange={scoreForm.setOpponentScore}
+          max={scoreForm.targetScore}
+        />
       </section>
+
+      {scoreForm.showDrawError && scoreForm.isDraw && (
+        <p className="text-center text-sm text-red-600 dark:text-red-400">
+          Scores can't be equal — fencing resolves a tie with a sudden-death touch.
+        </p>
+      )}
 
       <section className="flex items-center justify-between">
         <div className="inline-flex items-center rounded-full bg-slate-200 px-4 py-1.5 text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -111,7 +126,7 @@ export function QuickLogPage() {
 
       <section className="flex flex-col gap-3">
         <SegmentedToggle options={BOUT_FORMAT_OPTIONS} value={boutFormat} onChange={setBoutFormat} />
-        <SegmentedToggle options={TARGET_SCORE_OPTIONS} value={targetScore} onChange={setTargetScore} />
+        <SegmentedToggle options={TARGET_SCORE_OPTIONS} value={scoreForm.targetScore} onChange={scoreForm.setTargetScore} />
       </section>
 
       <section>

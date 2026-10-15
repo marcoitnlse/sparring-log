@@ -20,18 +20,11 @@ function LastFiveList({ bouts }: { bouts: Bout[] }) {
     <ul className="border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50">
       {bouts.map((bout) => {
         const won = bout.fencer_score > bout.opponent_score
-        const drew = bout.fencer_score === bout.opponent_score
         return (
           <li key={bout.id} className="flex items-center justify-between px-4 py-2 text-sm">
             <span className="text-slate-500 dark:text-slate-400">{formatDate(bout.bout_date)}</span>
             <span
-              className={`font-semibold ${
-                drew
-                  ? 'text-slate-500 dark:text-slate-400'
-                  : won
-                    ? 'text-emerald-600 dark:text-emerald-400'
-                    : 'text-red-600 dark:text-red-400'
-              }`}
+              className={`font-semibold ${won ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}
             >
               {bout.fencer_score}–{bout.opponent_score}
             </span>
@@ -241,9 +234,7 @@ export function OpponentsPage() {
                     <div className="flex flex-col items-end gap-1">
                       <RecentFormDots outcomes={stats.recentForm} />
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        W-L: {stats.wins}–{stats.losses}
-                        {stats.draws > 0 ? `–${stats.draws}` : ''} · {stats.total}{' '}
-                        {stats.total === 1 ? 'bout' : 'bouts'}
+                        W-L: {stats.wins}–{stats.losses} · {stats.total} {stats.total === 1 ? 'bout' : 'bouts'}
                       </p>
                     </div>
                   )}

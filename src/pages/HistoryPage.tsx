@@ -1,5 +1,6 @@
 import { Fragment, useState } from 'react'
 import { useBoutHistory } from '../hooks/useBoutHistory'
+import { useScoreForm } from '../hooks/useScoreForm'
 import type { Bout } from '../lib/boutsApi'
 import { ScoreStepper } from '../components/ScoreStepper'
 import { SegmentedToggle } from '../components/SegmentedToggle'
@@ -14,24 +15,23 @@ interface EditFormProps {
 }
 
 function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
-  const [fencerScore, setFencerScore] = useState(bout.fencer_score)
-  const [opponentScore, setOpponentScore] = useState(bout.opponent_score)
+  const scoreForm = useScoreForm(bout.fencer_score, bout.opponent_score, bout.target_score)
   const [boutDate, setBoutDate] = useState(bout.bout_date)
   const [boutFormat, setBoutFormat] = useState(bout.bout_format)
-  const [targetScore, setTargetScore] = useState(bout.target_score)
   const [notes, setNotes] = useState(bout.notes ?? '')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   async function handleSave() {
+    if (!scoreForm.checkCanSave()) return
     setSaving(true)
     try {
       await onUpdate(bout.id, {
-        fencerScore,
-        opponentScore,
+        fencerScore: scoreForm.fencerScore,
+        opponentScore: scoreForm.opponentScore,
         boutDate,
         boutFormat,
-        targetScore,
+        targetScore: scoreForm.targetScore,
         notes: notes.trim() || undefined,
       })
       onClose()
@@ -54,12 +54,27 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
   return (
     <div className="space-y-4 border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
       <div className="flex items-center justify-center gap-8">
-        <ScoreStepper label="You" value={fencerScore} onChange={setFencerScore} />
-        <ScoreStepper label="Opponent" value={opponentScore} onChange={setOpponentScore} />
+        <ScoreStepper
+          label="You"
+          value={scoreForm.fencerScore}
+          onChange={scoreForm.setFencerScore}
+          max={scoreForm.targetScore}
+        />
+        <ScoreStepper
+          label="Opponent"
+          value={scoreForm.opponentScore}
+          onChange={scoreForm.setOpponentScore}
+          max={scoreForm.targetScore}
+        />
       </div>
+      {scoreForm.showDrawError && scoreForm.isDraw && (
+        <p className="text-center text-sm text-red-600 dark:text-red-400">
+          Scores can't be equal — fencing resolves a tie with a sudden-death touch.
+        </p>
+      )}
       <div className="flex flex-col items-center gap-2">
         <SegmentedToggle options={BOUT_FORMAT_OPTIONS} value={boutFormat} onChange={setBoutFormat} />
-        <SegmentedToggle options={TARGET_SCORE_OPTIONS} value={targetScore} onChange={setTargetScore} />
+        <SegmentedToggle options={TARGET_SCORE_OPTIONS} value={scoreForm.targetScore} onChange={scoreForm.setTargetScore} />
       </div>
       <input
         type="date"
@@ -132,7 +147,6 @@ export function HistoryPage() {
           const isNewDate = bout.bout_date !== lastDate
           lastDate = bout.bout_date
           const won = bout.fencer_score > bout.opponent_score
-          const drew = bout.fencer_score === bout.opponent_score
 
           return (
             <Fragment key={bout.id}>
@@ -154,13 +168,7 @@ export function HistoryPage() {
                     </p>
                   </div>
                   <span
-                    className={`text-lg font-semibold ${
-                      drew
-                        ? 'text-slate-500 dark:text-slate-400'
-                        : won
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-red-600 dark:text-red-400'
-                    }`}
+                    className={`text-lg font-semibold ${won ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}
                   >
                     {bout.fencer_score}–{bout.opponent_score}
                   </span>
