@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { ProfileSettings } from './ProfileSettings'
 
 const TABS = [
   { to: '/', label: 'Log', icon: '✚' },
@@ -10,19 +12,39 @@ const TABS = [
 ]
 
 export function AppLayout({ children }: { children: ReactNode }) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
   return (
     <div className="flex min-h-full flex-col bg-slate-50 dark:bg-slate-950">
-      <header className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Fencing Bout Tracker
-        </span>
-        <button
-          type="button"
-          onClick={() => supabase.auth.signOut()}
-          className="text-sm text-slate-500 underline underline-offset-2 dark:text-slate-400"
-        >
-          Sign out
-        </button>
+      <header className="border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between px-4 py-3">
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            Fencing Bout Tracker
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSettingsOpen((v) => !v)}
+              aria-label="Settings"
+              aria-expanded={settingsOpen}
+              className="text-lg leading-none text-slate-500 dark:text-slate-400"
+            >
+              ⚙
+            </button>
+            <button
+              type="button"
+              onClick={() => supabase.auth.signOut()}
+              className="text-sm text-slate-500 underline underline-offset-2 dark:text-slate-400"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+        {settingsOpen && (
+          <div className="border-t border-slate-200 dark:border-slate-800">
+            <ProfileSettings />
+          </div>
+        )}
       </header>
 
       <main className="flex-1 overflow-y-auto pb-20">{children}</main>
