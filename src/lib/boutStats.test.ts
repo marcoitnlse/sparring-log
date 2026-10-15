@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeBoutStats, filterBouts, groupBoutsByOpponent, outcomeOf } from './boutStats'
+import { computeBoutStats, computeSessionFormTrend, filterBouts, groupBoutsByOpponent, outcomeOf } from './boutStats'
 import { makeBout } from '../test/fixtures'
 
 describe('outcomeOf', () => {
@@ -159,5 +159,89 @@ describe('filterBouts', () => {
     })
 
     expect(result).toEqual([matchesBoth])
+  })
+})
+
+describe('computeSessionFormTrend', () => {
+  it('returns an empty array for no bouts', () => {
+    expect(computeSessionFormTrend([])).toEqual([])
+  })
+
+  it('groups bouts by date into one session per day, oldest first', () => {
+    const trend = computeSessionFormTrend([
+      makeBout({ bout_date: '2026-10-10', fencer_score: 15, opponent_score: 10 }), // win
+      makeBout({ bout_date: '2026-10-05', fencer_score: 8, opponent_score: 15 }), // loss
+      makeBout({ bout_date: '2026-10-05', fencer_score: 15, opponent_score: 10 }), // win
+    ])
+
+    expect(trend.map((s) => s.date)).toEqual(['2026-10-05', '2026-10-10'])
+    expect(trend[0]).toMatchObject({ wins: 1, losses: 1, winRatePct: 50 })
+    expect(trend[1]).toMatchObject({ wins: 1, losses: 0, winRatePct: 100 })
+  })
+
+  it('computes a trailing rolling average once rollingWindowSize sessions exist', () => {
+    const trend = computeSessionFormTrend(
+      [
+        makeBout({ bout_date: '2026-10-01', fencer_score: 15, opponent_score: 10 }), // win, day1: 100%
+        makeBout({ bout_date: '2026-10-02', fencer_score: 8, opponent_score: 15 }), // loss, day2: 0%
+        makeBout({ bout_date: '2026-10-03', fencer_score: 15, opponent_score: 10 }), // win, day3: 100%
+        makeBout({ bout_date: '2026-10-04', fencer_score: 8, opponent_score: 15 }), // loss, day4: 0%
+      ],
+      { rollingWindowSize: 3 },
+    )
+
+    // day1: expanding window of just itself -> 100%
+    expect(trend[0].rollingWinRatePct).toBe(100)
+    // day2: window of day1+day2 (1W/1L) -> 50%
+    expect(trend[1].rollingWinRatePct).toBe(50)
+    // day3: window of day1-3 (2W/1L) -> 66.7%
+    expect(trend[2].rollingWinRatePct).toBe(66.7)
+    // day4: window slides to day2-4 (1W/2L) -> 33.3%
+    expect(trend[3].rollingWinRatePct).toBe(33.3)
+  })
+
+  it('supports a custom rolling window size', () => {
+    const trend = computeSessionFormTrend(
+      [
+        makeBout({ bout_date: '2026-10-01', fencer_score: 15, opponent_score: 10 }),
+        makeBout({ bout_date: '2026-10-02', fencer_score: 15, opponent_score: 10 }),
+      ],
+      { rollingWindowSize: 1 },
+    )
+    // window of 1 means rolling average equals the raw per-session ratio
+    expect(trend.map((s) => s.rollingWinRatePct)).toEqual(trend.map((s) => s.winRatePct))
+  })
+
+  it('only includes the most recent `limit` sessions', () => {
+    const bouts = Array.from({ length: 5 }, (_, i) =>
+      makeBout({ bout_date: `2026-10-0${i + 1}`, fencer_score: 15, opponent_score: 10 }),
+    )
+    const trend = computeSessionFormTrend(bouts, { limit: 2 })
+    expect(trend.map((s) => s.date)).toEqual(['2026-10-04', '2026-10-05'])
+  })
+
+  it('flags a break when the gap since the previous session exceeds the threshold', () => {
+    const trend = computeSessionFormTrend(
+      [
+        makeBout({ bout_date: '2026-10-01', fencer_score: 15, opponent_score: 10 }),
+        makeBout({ bout_date: '2026-10-05', fencer_score: 15, opponent_score: 10 }), // 4 days later: no break
+        makeBout({ bout_date: '2026-10-20', fencer_score: 15, opponent_score: 10 }), // 15 days later: break
+      ],
+      { breakThresholdDays: 10 },
+    )
+    expect(trend.map((s) => s.isBreakFromPrevious)).toEqual([false, false, true])
+  })
+
+  it('resets the rolling average at a break instead of blending across it', () => {
+    const trend = computeSessionFormTrend(
+      [
+        makeBout({ bout_date: '2026-10-01', fencer_score: 8, opponent_score: 15 }), // loss, pre-break: 0%
+        makeBout({ bout_date: '2026-10-02', fencer_score: 8, opponent_score: 15 }), // loss, pre-break: 0%
+        makeBout({ bout_date: '2026-10-20', fencer_score: 15, opponent_score: 10 }), // win, post-break: 100%
+      ],
+      { rollingWindowSize: 3, breakThresholdDays: 10 },
+    )
+    // without the reset this would average in the two pre-break losses too
+    expect(trend[2].rollingWinRatePct).toBe(100)
   })
 })

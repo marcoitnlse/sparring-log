@@ -86,3 +86,82 @@ export function groupBoutsByOpponent(bouts: Bout[]): Map<string, Bout[]> {
   }
   return byOpponent
 }
+
+export interface SessionFormPoint {
+  date: string
+  wins: number
+  losses: number
+  /** Win ratio for this session alone, 0-100. */
+  winRatePct: number
+  /** Win ratio averaged over this session and up to the previous
+   * `rollingWindowSize - 1` sessions — an expanding window until enough
+   * history exists (or until a break resets it), then a trailing one.
+   * Smooths out the noise of single low-bout-count sessions so a trend
+   * is actually visible. */
+  rollingWinRatePct: number
+  /** True when more than `breakThresholdDays` passed since the previous
+   * visible session — a training layoff, not just a quiet day. The
+   * trend line shouldn't connect across it, and the rolling average
+   * restarts here rather than blending pre- and post-break form. */
+  isBreakFromPrevious: boolean
+}
+
+export interface SessionTrendOptions {
+  /** How many of the most recent sessions to include. */
+  limit?: number
+  /** How many sessions the rolling average smooths over. */
+  rollingWindowSize?: number
+  /** A gap longer than this many days counts as a training break. */
+  breakThresholdDays?: number
+}
+
+function daysBetween(earlierDate: string, laterDate: string): number {
+  const MS_PER_DAY = 24 * 60 * 60 * 1000
+  return (new Date(laterDate + 'T00:00:00').getTime() - new Date(earlierDate + 'T00:00:00').getTime()) / MS_PER_DAY
+}
+
+/** One point per training session (bouts grouped by date), oldest first,
+ * for charting a recent win-rate trend. Only the most recent `limit`
+ * sessions are included — an unbounded chart gets unreadable as history
+ * grows, and recency is what matters for a trend. A single session's raw
+ * ratio is noisy (a 2-bout day swings between 0/50/100%), so each point
+ * also carries a rolling average — reset across any training break so a
+ * layoff doesn't blend stale pre-break form into the current trend. */
+export function computeSessionFormTrend(bouts: Bout[], options: SessionTrendOptions = {}): SessionFormPoint[] {
+  const { limit = 20, rollingWindowSize = 3, breakThresholdDays = 10 } = options
+
+  const byDate = new Map<string, { wins: number; losses: number }>()
+  for (const bout of bouts) {
+    const entry = byDate.get(bout.bout_date) ?? { wins: 0, losses: 0 }
+    if (outcomeOf(bout) === 'win') entry.wins++
+    else entry.losses++
+    byDate.set(bout.bout_date, entry)
+  }
+
+  const allSessions = [...byDate.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, { wins, losses }]) => ({
+      date,
+      wins,
+      losses,
+      winRatePct: Math.round((wins / (wins + losses)) * 1000) / 10,
+    }))
+
+  const sessions = allSessions.slice(Math.max(0, allSessions.length - limit))
+
+  let segmentStart = 0
+  return sessions.map((session, i) => {
+    const isBreakFromPrevious =
+      i > 0 && daysBetween(sessions[i - 1].date, session.date) > breakThresholdDays
+    if (isBreakFromPrevious) segmentStart = i
+
+    const window = sessions.slice(Math.max(segmentStart, i - rollingWindowSize + 1), i + 1)
+    const windowWins = window.reduce((sum, s) => sum + s.wins, 0)
+    const windowLosses = window.reduce((sum, s) => sum + s.losses, 0)
+    return {
+      ...session,
+      rollingWinRatePct: Math.round((windowWins / (windowWins + windowLosses)) * 1000) / 10,
+      isBreakFromPrevious,
+    }
+  })
+}

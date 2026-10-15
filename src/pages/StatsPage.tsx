@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
+import { useMemo, useState } from 'react'
 import { useBouts } from '../hooks/useBouts'
 import { useOpponents } from '../hooks/useOpponents'
-import { useAuth } from '../hooks/useAuth'
-import { supabase } from '../lib/supabaseClient'
-import { computeBoutStats, filterBouts } from '../lib/boutStats'
+import { computeBoutStats, computeSessionFormTrend, filterBouts } from '../lib/boutStats'
 import { SegmentedToggle } from '../components/SegmentedToggle'
+import { FormTrendChart } from '../components/FormTrendChart'
 import {
   BOUT_FORMAT_FILTER_OPTIONS,
   TARGET_SCORE_FILTER_OPTIONS,
@@ -16,64 +14,10 @@ import { HANDEDNESS_FILTER_OPTIONS, type HandednessFilter } from '../lib/opponen
 
 function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl bg-white p-4 text-center shadow-sm dark:bg-slate-900">
-      <p className="text-2xl font-semibold text-slate-900 dark:text-slate-50">{value}</p>
+    <div className="rounded-lg bg-white p-3 text-center shadow-sm dark:bg-slate-900">
+      <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">{value}</p>
       <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
     </div>
-  )
-}
-
-function ProfileSection() {
-  const { session } = useAuth()
-  const [displayName, setDisplayName] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    if (!session) return
-    supabase
-      .from('profiles')
-      .select('display_name')
-      .eq('id', session.user.id)
-      .single()
-      .then(({ data }) => {
-        if (data?.display_name) setDisplayName(data.display_name)
-      })
-  }, [session])
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    if (!session || saving) return
-    setSaving(true)
-    setSaved(false)
-    await supabase.from('profiles').update({ display_name: displayName }).eq('id', session.user.id)
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="flex items-end gap-2">
-      <div className="flex-1">
-        <label htmlFor="displayName" className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
-          Display name
-        </label>
-        <input
-          id="displayName"
-          type="text"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-        />
-      </div>
-      <button
-        type="submit"
-        disabled={saving}
-        className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
-      >
-        {saved ? 'Saved' : saving ? 'Saving…' : 'Save'}
-      </button>
-    </form>
   )
 }
 
@@ -85,6 +29,14 @@ export function StatsPage() {
   const [formatFilter, setFormatFilter] = useState<BoutFormatFilter>('all')
   const [targetFilter, setTargetFilter] = useState<TargetScoreFilter>('all')
   const [handednessFilter, setHandednessFilter] = useState<HandednessFilter>('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  const activeFilterCount = [
+    opponentFilter !== 'all',
+    formatFilter !== 'all',
+    targetFilter !== 'all',
+    handednessFilter !== 'all',
+  ].filter(Boolean).length
 
   const filteredBouts = useMemo(
     () =>
@@ -98,63 +50,78 @@ export function StatsPage() {
   )
 
   const stats = useMemo(() => computeBoutStats(filteredBouts), [filteredBouts])
+  const sessions = useMemo(() => computeSessionFormTrend(filteredBouts), [filteredBouts])
 
   return (
-    <div className="space-y-8 p-4">
+    <div className="space-y-6 p-4">
       <section>
-        <h2 className="mb-3 text-sm font-medium text-slate-500 dark:text-slate-400">Filters</h2>
-        <div className="flex flex-col gap-3">
-          <select
-            value={opponentFilter}
-            onChange={(e) => setOpponentFilter(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-          >
-            <option value="all">All opponents</option>
-            {opponents.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-          <SegmentedToggle options={BOUT_FORMAT_FILTER_OPTIONS} value={formatFilter} onChange={setFormatFilter} />
-          <SegmentedToggle options={TARGET_SCORE_FILTER_OPTIONS} value={targetFilter} onChange={setTargetFilter} />
-          <SegmentedToggle
-            options={HANDEDNESS_FILTER_OPTIONS}
-            value={handednessFilter}
-            onChange={setHandednessFilter}
-          />
-        </div>
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-sm font-medium text-slate-500 dark:text-slate-400">Record</h2>
-        {loading ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            <StatTile label="Bouts" value={stats.total} />
-            <StatTile label="Win rate" value={stats.winRatePct !== null ? `${stats.winRatePct}%` : '—'} />
-            <StatTile label="Wins" value={stats.wins} />
-            <StatTile label="Losses" value={stats.losses} />
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((v) => !v)}
+          aria-expanded={filtersOpen}
+          className="flex w-full items-center justify-between rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+        >
+          <span>Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</span>
+          <span className="text-slate-400 dark:text-slate-500">{filtersOpen ? '▲' : '▼'}</span>
+        </button>
+        {filtersOpen && (
+          <div className="mt-3 flex flex-col gap-3">
+            <select
+              value={opponentFilter}
+              onChange={(e) => setOpponentFilter(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            >
+              <option value="all">All opponents</option>
+              {opponents.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+            <SegmentedToggle options={BOUT_FORMAT_FILTER_OPTIONS} value={formatFilter} onChange={setFormatFilter} />
+            <SegmentedToggle options={TARGET_SCORE_FILTER_OPTIONS} value={targetFilter} onChange={setTargetFilter} />
+            <SegmentedToggle
+              options={HANDEDNESS_FILTER_OPTIONS}
+              value={handednessFilter}
+              onChange={setHandednessFilter}
+            />
           </div>
         )}
       </section>
 
-      <section>
-        <h2 className="mb-3 text-sm font-medium text-slate-500 dark:text-slate-400">Touches</h2>
-        {!loading && (
-          <div className="grid grid-cols-3 gap-3">
-            <StatTile label="Avg scored" value={stats.avgScored ?? '—'} />
-            <StatTile label="Avg conceded" value={stats.avgConceded ?? '—'} />
-            <StatTile label="Avg margin" value={stats.avgMargin !== null ? (stats.avgMargin > 0 ? `+${stats.avgMargin}` : stats.avgMargin) : '—'} />
-          </div>
-        )}
-      </section>
+      {loading ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
+      ) : (
+        <>
+          <section className="rounded-xl bg-white p-5 text-center shadow-sm dark:bg-slate-900">
+            <p className="text-4xl font-bold text-slate-900 dark:text-slate-50">
+              {stats.winRatePct !== null ? `${stats.winRatePct}%` : '—'}
+            </p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {stats.wins}W–{stats.losses}L · {stats.total} bouts
+            </p>
+          </section>
 
-      <section>
-        <h2 className="mb-3 text-sm font-medium text-slate-500 dark:text-slate-400">Profile</h2>
-        <ProfileSection />
-      </section>
+          <section>
+            <h2 className="mb-2 text-sm font-medium text-slate-500 dark:text-slate-400">Form trend</h2>
+            <div className="rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900">
+              <FormTrendChart sessions={sessions} />
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mb-2 text-sm font-medium text-slate-500 dark:text-slate-400">Touches</h2>
+            <div className="grid grid-cols-3 gap-2">
+              <StatTile label="Avg scored" value={stats.avgScored ?? '—'} />
+              <StatTile label="Avg conceded" value={stats.avgConceded ?? '—'} />
+              <StatTile
+                label="Avg margin"
+                value={stats.avgMargin !== null ? (stats.avgMargin > 0 ? `+${stats.avgMargin}` : stats.avgMargin) : '—'}
+              />
+            </div>
+          </section>
+        </>
+      )}
     </div>
   )
 }
