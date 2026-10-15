@@ -1,5 +1,6 @@
 import { Fragment, useState } from 'react'
 import { useBoutHistory } from '../hooks/useBoutHistory'
+import { useScoreForm } from '../hooks/useScoreForm'
 import type { Bout } from '../lib/boutsApi'
 import { ScoreStepper } from '../components/ScoreStepper'
 import { SegmentedToggle } from '../components/SegmentedToggle'
@@ -14,47 +15,23 @@ interface EditFormProps {
 }
 
 function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
-  const [fencerScore, setFencerScore] = useState(bout.fencer_score)
-  const [opponentScore, setOpponentScore] = useState(bout.opponent_score)
+  const scoreForm = useScoreForm(bout.fencer_score, bout.opponent_score, bout.target_score)
   const [boutDate, setBoutDate] = useState(bout.bout_date)
   const [boutFormat, setBoutFormat] = useState(bout.bout_format)
-  const [targetScore, setTargetScore] = useState(bout.target_score)
   const [notes, setNotes] = useState(bout.notes ?? '')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [showDrawError, setShowDrawError] = useState(false)
-
-  const isDraw = fencerScore === opponentScore
-
-  function handleFencerScoreChange(value: number) {
-    setFencerScore(value)
-    setShowDrawError(false)
-  }
-
-  function handleOpponentScoreChange(value: number) {
-    setOpponentScore(value)
-    setShowDrawError(false)
-  }
-
-  function handleTargetScoreChange(next: typeof targetScore) {
-    setTargetScore(next)
-    setFencerScore((s) => Math.min(s, next))
-    setOpponentScore((s) => Math.min(s, next))
-  }
 
   async function handleSave() {
-    if (isDraw) {
-      setShowDrawError(true)
-      return
-    }
+    if (!scoreForm.checkCanSave()) return
     setSaving(true)
     try {
       await onUpdate(bout.id, {
-        fencerScore,
-        opponentScore,
+        fencerScore: scoreForm.fencerScore,
+        opponentScore: scoreForm.opponentScore,
         boutDate,
         boutFormat,
-        targetScore,
+        targetScore: scoreForm.targetScore,
         notes: notes.trim() || undefined,
       })
       onClose()
@@ -77,17 +54,27 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
   return (
     <div className="space-y-4 border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
       <div className="flex items-center justify-center gap-8">
-        <ScoreStepper label="You" value={fencerScore} onChange={handleFencerScoreChange} max={targetScore} />
-        <ScoreStepper label="Opponent" value={opponentScore} onChange={handleOpponentScoreChange} max={targetScore} />
+        <ScoreStepper
+          label="You"
+          value={scoreForm.fencerScore}
+          onChange={scoreForm.setFencerScore}
+          max={scoreForm.targetScore}
+        />
+        <ScoreStepper
+          label="Opponent"
+          value={scoreForm.opponentScore}
+          onChange={scoreForm.setOpponentScore}
+          max={scoreForm.targetScore}
+        />
       </div>
-      {showDrawError && isDraw && (
+      {scoreForm.showDrawError && scoreForm.isDraw && (
         <p className="text-center text-sm text-red-600 dark:text-red-400">
           Scores can't be equal — fencing resolves a tie with a sudden-death touch.
         </p>
       )}
       <div className="flex flex-col items-center gap-2">
         <SegmentedToggle options={BOUT_FORMAT_OPTIONS} value={boutFormat} onChange={setBoutFormat} />
-        <SegmentedToggle options={TARGET_SCORE_OPTIONS} value={targetScore} onChange={handleTargetScoreChange} />
+        <SegmentedToggle options={TARGET_SCORE_OPTIONS} value={scoreForm.targetScore} onChange={scoreForm.setTargetScore} />
       </div>
       <input
         type="date"
