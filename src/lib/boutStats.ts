@@ -1,6 +1,30 @@
 import type { Bout } from '../hooks/useBouts'
+import type { BoutFormatFilter, TargetScoreFilter } from './boutOptions'
+import type { HandednessFilter } from './opponentOptions'
 
 export type BoutOutcome = 'win' | 'loss'
+
+export interface BoutFilters {
+  opponentId: string
+  format: BoutFormatFilter
+  targetScore: TargetScoreFilter
+  handedness: HandednessFilter
+}
+
+/** Narrows bouts down to whatever's currently selected on the Stats page —
+ * each filter is "all" (no-op) or a specific value, combined with AND.
+ * Pulled out of StatsPage and tested here since it's real logic (unlike
+ * most of what's left in that component), and a bug in it would show up
+ * as a quietly-wrong number with no visible error. */
+export function filterBouts(bouts: Bout[], filters: BoutFilters): Bout[] {
+  return bouts.filter(
+    (b) =>
+      (filters.opponentId === 'all' || b.opponent_id === filters.opponentId) &&
+      (filters.format === 'all' || b.bout_format === filters.format) &&
+      (filters.targetScore === 'all' || b.target_score === filters.targetScore) &&
+      (filters.handedness === 'all' || b.opponent_handedness === filters.handedness),
+  )
+}
 
 export interface BoutStatsSummary {
   total: number

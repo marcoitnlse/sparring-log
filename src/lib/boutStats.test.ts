@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeBoutStats, groupBoutsByOpponent, outcomeOf } from './boutStats'
+import { computeBoutStats, filterBouts, groupBoutsByOpponent, outcomeOf } from './boutStats'
 import { makeBout } from '../test/fixtures'
 
 describe('outcomeOf', () => {
@@ -107,5 +107,57 @@ describe('groupBoutsByOpponent', () => {
 
   it('returns an empty map for an empty list', () => {
     expect(groupBoutsByOpponent([]).size).toBe(0)
+  })
+})
+
+describe('filterBouts', () => {
+  const allAll = { opponentId: 'all', format: 'all', targetScore: 'all', handedness: 'all' } as const
+
+  it('returns everything when every filter is "all"', () => {
+    const bouts = [makeBout(), makeBout(), makeBout()]
+    expect(filterBouts(bouts, allAll)).toEqual(bouts)
+  })
+
+  it('narrows by opponent', () => {
+    const match = makeBout({ opponent_id: 'opp-a' })
+    const other = makeBout({ opponent_id: 'opp-b' })
+    expect(filterBouts([match, other], { ...allAll, opponentId: 'opp-a' })).toEqual([match])
+  })
+
+  it('narrows by match format', () => {
+    const free = makeBout({ bout_format: 'free' })
+    const timed = makeBout({ bout_format: 'timed' })
+    expect(filterBouts([free, timed], { ...allAll, format: 'timed' })).toEqual([timed])
+  })
+
+  it('narrows by target score', () => {
+    const to5 = makeBout({ target_score: 5 })
+    const to15 = makeBout({ target_score: 15 })
+    expect(filterBouts([to5, to15], { ...allAll, targetScore: 5 })).toEqual([to5])
+  })
+
+  it('narrows by opponent handedness', () => {
+    const vsLefty = makeBout({ opponent_handedness: 'left' })
+    const vsRighty = makeBout({ opponent_handedness: 'right' })
+    expect(filterBouts([vsLefty, vsRighty], { ...allAll, handedness: 'left' })).toEqual([vsLefty])
+  })
+
+  it('excludes bouts with no handedness on record when filtering by handedness', () => {
+    const unknown = makeBout({ opponent_handedness: null })
+    expect(filterBouts([unknown], { ...allAll, handedness: 'left' })).toEqual([])
+  })
+
+  it('combines filters with AND, not OR', () => {
+    const matchesBoth = makeBout({ opponent_id: 'opp-a', bout_format: 'timed' })
+    const matchesOnlyOpponent = makeBout({ opponent_id: 'opp-a', bout_format: 'free' })
+    const matchesOnlyFormat = makeBout({ opponent_id: 'opp-b', bout_format: 'timed' })
+
+    const result = filterBouts([matchesBoth, matchesOnlyOpponent, matchesOnlyFormat], {
+      ...allAll,
+      opponentId: 'opp-a',
+      format: 'timed',
+    })
+
+    expect(result).toEqual([matchesBoth])
   })
 })

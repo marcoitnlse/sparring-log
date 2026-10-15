@@ -4,7 +4,7 @@ import { useBouts } from '../hooks/useBouts'
 import { useOpponents } from '../hooks/useOpponents'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabaseClient'
-import { computeBoutStats } from '../lib/boutStats'
+import { computeBoutStats, filterBouts } from '../lib/boutStats'
 import { SegmentedToggle } from '../components/SegmentedToggle'
 import {
   BOUT_FORMAT_FILTER_OPTIONS,
@@ -88,13 +88,12 @@ export function StatsPage() {
 
   const filteredBouts = useMemo(
     () =>
-      bouts.filter(
-        (b) =>
-          (opponentFilter === 'all' || b.opponent_id === opponentFilter) &&
-          (formatFilter === 'all' || b.bout_format === formatFilter) &&
-          (targetFilter === 'all' || b.target_score === targetFilter) &&
-          (handednessFilter === 'all' || b.opponent_handedness === handednessFilter),
-      ),
+      filterBouts(bouts, {
+        opponentId: opponentFilter,
+        format: formatFilter,
+        targetScore: targetFilter,
+        handedness: handednessFilter,
+      }),
     [bouts, opponentFilter, formatFilter, targetFilter, handednessFilter],
   )
 
