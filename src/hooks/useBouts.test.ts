@@ -98,7 +98,7 @@ describe('useBouts', () => {
     })
 
     expect(builder.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ weapon: 'epee', bout_format: 'timed', target_score: 15 }),
+      expect.objectContaining({ weapon: 'epee', bout_format: 'free', target_score: 15 }),
     )
   })
 

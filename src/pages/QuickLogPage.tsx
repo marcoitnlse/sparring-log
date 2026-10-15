@@ -18,7 +18,7 @@ export function QuickLogPage() {
   const [fencerScore, setFencerScore] = useState(0)
   const [opponentScore, setOpponentScore] = useState(0)
   const [boutDate, setBoutDate] = useState(todayIso())
-  const [boutFormat, setBoutFormat] = useState<BoutFormat>('timed')
+  const [boutFormat, setBoutFormat] = useState<BoutFormat>('free')
   const [targetScore, setTargetScore] = useState<TargetScore>(15)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
