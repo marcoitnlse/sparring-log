@@ -78,7 +78,15 @@ export function StatsPage() {
                 </option>
               ))}
             </select>
-            <SegmentedToggle options={BOUT_FORMAT_FILTER_OPTIONS} value={formatFilter} onChange={setFormatFilter} />
+            {/* 5 segments (All/Training/Free time/Timed match/Competition) can
+             * overflow a narrow phone screen — scroll horizontally rather than
+             * clip or wrap. `w-max` keeps the pills at their natural width so
+             * the flex items shrink-to-scroll instead of shrinking-to-squish. */}
+            <div className="overflow-x-auto">
+              <div className="w-max">
+                <SegmentedToggle options={BOUT_FORMAT_FILTER_OPTIONS} value={formatFilter} onChange={setFormatFilter} />
+              </div>
+            </div>
             <SegmentedToggle options={TARGET_SCORE_FILTER_OPTIONS} value={targetFilter} onChange={setTargetFilter} />
             <SegmentedToggle
               options={HANDEDNESS_FILTER_OPTIONS}
