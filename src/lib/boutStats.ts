@@ -1,12 +1,11 @@
 import type { Bout } from '../hooks/useBouts'
 
-export type BoutOutcome = 'win' | 'loss' | 'draw'
+export type BoutOutcome = 'win' | 'loss'
 
 export interface BoutStatsSummary {
   total: number
   wins: number
   losses: number
-  draws: number
   winRatePct: number | null
   avgScored: number | null
   avgConceded: number | null
@@ -15,10 +14,10 @@ export interface BoutStatsSummary {
   recentForm: BoutOutcome[]
 }
 
+/** A bout always has a winner — fencing resolves a tie via a sudden-death
+ * touch, so logged scores are never equal (enforced in the DB too). */
 export function outcomeOf(bout: Bout): BoutOutcome {
-  if (bout.fencer_score > bout.opponent_score) return 'win'
-  if (bout.fencer_score < bout.opponent_score) return 'loss'
-  return 'draw'
+  return bout.fencer_score > bout.opponent_score ? 'win' : 'loss'
 }
 
 /** Pure aggregate over any subset of bouts — same function powers the
@@ -27,15 +26,12 @@ export function computeBoutStats(bouts: Bout[]): BoutStatsSummary {
   const total = bouts.length
   let wins = 0
   let losses = 0
-  let draws = 0
   let scoredSum = 0
   let concededSum = 0
 
   for (const bout of bouts) {
-    const outcome = outcomeOf(bout)
-    if (outcome === 'win') wins++
-    else if (outcome === 'loss') losses++
-    else draws++
+    if (outcomeOf(bout) === 'win') wins++
+    else losses++
     scoredSum += bout.fencer_score
     concededSum += bout.opponent_score
   }
@@ -47,7 +43,6 @@ export function computeBoutStats(bouts: Bout[]): BoutStatsSummary {
     total,
     wins,
     losses,
-    draws,
     winRatePct: total > 0 ? Math.round((wins / total) * 1000) / 10 : null,
     avgScored: total > 0 ? Math.round((scoredSum / total) * 10) / 10 : null,
     avgConceded: total > 0 ? Math.round((concededSum / total) * 10) / 10 : null,

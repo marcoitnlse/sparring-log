@@ -11,9 +11,6 @@ describe('outcomeOf', () => {
     expect(outcomeOf(makeBout({ fencer_score: 8, opponent_score: 15 }))).toBe('loss')
   })
 
-  it('is a draw when scores are equal', () => {
-    expect(outcomeOf(makeBout({ fencer_score: 5, opponent_score: 5 }))).toBe('draw')
-  })
 })
 
 describe('computeBoutStats', () => {
@@ -23,7 +20,6 @@ describe('computeBoutStats', () => {
       total: 0,
       wins: 0,
       losses: 0,
-      draws: 0,
       winRatePct: null,
       avgScored: null,
       avgConceded: null,
@@ -32,18 +28,16 @@ describe('computeBoutStats', () => {
     })
   })
 
-  it('tallies wins, losses, and draws', () => {
+  it('tallies wins and losses', () => {
     const bouts = [
       makeBout({ fencer_score: 15, opponent_score: 10 }), // win
       makeBout({ fencer_score: 15, opponent_score: 10 }), // win
       makeBout({ fencer_score: 8, opponent_score: 15 }), // loss
-      makeBout({ fencer_score: 5, opponent_score: 5 }), // draw
     ]
     const stats = computeBoutStats(bouts)
-    expect(stats.total).toBe(4)
+    expect(stats.total).toBe(3)
     expect(stats.wins).toBe(2)
     expect(stats.losses).toBe(1)
-    expect(stats.draws).toBe(1)
   })
 
   it('computes win rate as a rounded percentage', () => {

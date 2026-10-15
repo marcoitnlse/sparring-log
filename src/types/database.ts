@@ -105,19 +105,7 @@ export interface Database {
         ]
       }
     }
-    Views: {
-      bout_stats: {
-        Row: {
-          user_id: string
-          total_bouts: number
-          wins: number
-          losses: number
-          draws: number
-          win_rate_pct: number | null
-        }
-        Relationships: []
-      }
-    }
+    Views: Record<string, never>
     Functions: Record<string, never>
   }
 }

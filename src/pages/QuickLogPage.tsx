@@ -26,9 +26,17 @@ export function QuickLogPage() {
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
+  const isDraw = fencerScore === opponentScore
+
+  function handleTargetScoreChange(next: TargetScore) {
+    setTargetScore(next)
+    setFencerScore((s) => Math.min(s, next))
+    setOpponentScore((s) => Math.min(s, next))
+  }
+
   async function handleSave() {
     const selected = opponents.find((o) => o.id === opponentId)
-    if (!selected || saving) return
+    if (!selected || saving || isDraw) return
     setSaving(true)
     try {
       await createBout({
@@ -81,10 +89,16 @@ export function QuickLogPage() {
       </section>
 
       <section className="flex items-center justify-center gap-8 rounded-xl bg-white py-6 shadow-sm dark:bg-slate-900">
-        <ScoreStepper label="You" value={fencerScore} onChange={setFencerScore} />
+        <ScoreStepper label="You" value={fencerScore} onChange={setFencerScore} max={targetScore} />
         <span className="text-2xl font-light text-slate-300 dark:text-slate-700">–</span>
-        <ScoreStepper label="Opponent" value={opponentScore} onChange={setOpponentScore} />
+        <ScoreStepper label="Opponent" value={opponentScore} onChange={setOpponentScore} max={targetScore} />
       </section>
+
+      {isDraw && (
+        <p className="text-center text-sm text-red-600 dark:text-red-400">
+          Scores can't be equal — fencing resolves a tie with a sudden-death touch.
+        </p>
+      )}
 
       <section className="flex items-center justify-between">
         <div className="inline-flex items-center rounded-full bg-slate-200 px-4 py-1.5 text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -111,7 +125,7 @@ export function QuickLogPage() {
 
       <section className="flex flex-col gap-3">
         <SegmentedToggle options={BOUT_FORMAT_OPTIONS} value={boutFormat} onChange={setBoutFormat} />
-        <SegmentedToggle options={TARGET_SCORE_OPTIONS} value={targetScore} onChange={setTargetScore} />
+        <SegmentedToggle options={TARGET_SCORE_OPTIONS} value={targetScore} onChange={handleTargetScoreChange} />
       </section>
 
       <section>
@@ -138,7 +152,7 @@ export function QuickLogPage() {
       <button
         type="button"
         onClick={handleSave}
-        disabled={!opponentId || saving}
+        disabled={!opponentId || saving || isDraw}
         className="fixed inset-x-4 bottom-20 rounded-xl bg-slate-900 py-4 text-lg font-semibold text-white shadow-lg disabled:opacity-40 dark:bg-slate-100 dark:text-slate-900"
       >
         {saving ? 'Saving…' : 'Save bout'}
