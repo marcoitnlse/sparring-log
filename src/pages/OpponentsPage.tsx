@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useOpponents } from '../hooks/useOpponents'
 import type { Opponent } from '../hooks/useOpponents'
 import { useBouts } from '../hooks/useBouts'
@@ -15,19 +16,40 @@ function handednessLabel(h: Handedness | null) {
   return h === 'right' ? 'R' : h === 'left' ? 'L' : null
 }
 
-function LastFiveList({ bouts }: { bouts: Bout[] }) {
+/** Last 5 bouts against an opponent, reverse-chronological (as `bouts`
+ * already is), with any notes shown inline right under the score — this
+ * list is already short, so there's nothing gained by hiding notes behind
+ * a further tap. Bouts with no notes at all render exactly as before. */
+function BoutHistoryList({ bouts }: { bouts: Bout[] }) {
   return (
-    <ul className="border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50">
+    <ul className="divide-y divide-slate-200 border-t border-slate-200 bg-slate-50 dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900/50">
       {bouts.map((bout) => {
         const won = bout.fencer_score > bout.opponent_score
+        const noteLines = [
+          { label: 'What worked', text: bout.notes_worked },
+          { label: "What didn't work", text: bout.notes_not_worked },
+          { label: 'Other comments', text: bout.notes_other },
+        ].filter((n): n is { label: string; text: string } => !!n.text)
+
         return (
-          <li key={bout.id} className="flex items-center justify-between px-4 py-2 text-sm">
-            <span className="text-slate-500 dark:text-slate-400">{formatDate(bout.bout_date)}</span>
-            <span
-              className={`font-semibold ${won ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}
-            >
-              {bout.fencer_score}–{bout.opponent_score}
-            </span>
+          <li key={bout.id} className="px-4 py-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500 dark:text-slate-400">{formatDate(bout.bout_date)}</span>
+              <span
+                className={`font-semibold ${won ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}
+              >
+                {bout.fencer_score}–{bout.opponent_score}
+              </span>
+            </div>
+            {noteLines.length > 0 && (
+              <div className="mt-1 space-y-0.5">
+                {noteLines.map(({ label, text }) => (
+                  <p key={label} className="text-slate-600 dark:text-slate-300">
+                    <span className="font-bold">{label}:</span> {text}
+                  </p>
+                ))}
+              </div>
+            )}
           </li>
         )
       })}
@@ -123,10 +145,19 @@ export function OpponentsPage() {
   const [name, setName] = useState('')
   const [newHandedness, setNewHandedness] = useState<Handedness>('right')
   const [saving, setSaving] = useState(false)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [searchParams] = useSearchParams()
+  const [expandedId, setExpandedId] = useState<string | null>(() => searchParams.get('expand'))
   const [editingId, setEditingId] = useState<string | null>(null)
 
   const byOpponent = useMemo(() => groupBoutsByOpponent(bouts), [bouts])
+
+  // Deep-linked here (e.g. from QuickLogPage's "View history") with
+  // ?expand=<opponentId> — scroll that opponent into view once loaded.
+  useEffect(() => {
+    const id = searchParams.get('expand')
+    if (!id) return
+    document.getElementById(`opponent-${id}`)?.scrollIntoView({ block: 'center' })
+  }, [searchParams, opponents])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -202,7 +233,7 @@ export function OpponentsPage() {
             const hand = handednessLabel(o.handedness)
 
             return (
-              <li key={o.id}>
+              <li key={o.id} id={`opponent-${o.id}`}>
                 <div
                   onClick={() => hasBouts && setExpandedId(expandedId === o.id ? null : o.id)}
                   className={`flex items-center justify-between px-4 py-3 ${
@@ -247,7 +278,7 @@ export function OpponentsPage() {
                     onClose={() => setEditingId(null)}
                   />
                 )}
-                {expandedId === o.id && <LastFiveList bouts={group.slice(0, 5)} />}
+                {expandedId === o.id && <BoutHistoryList bouts={group.slice(0, 5)} />}
               </li>
             )
           })}

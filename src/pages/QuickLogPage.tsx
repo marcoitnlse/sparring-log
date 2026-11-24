@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useOpponents } from '../hooks/useOpponents'
 import { useBouts } from '../hooks/useBouts'
 import { useScoreForm } from '../hooks/useScoreForm'
@@ -14,6 +15,7 @@ function todayIso() {
 }
 
 export function QuickLogPage() {
+  const navigate = useNavigate()
   const { opponents } = useOpponents()
   const { createBout } = useBouts({ skipInitialFetch: true })
   const scoreForm = useScoreForm(0, 0, 15)
@@ -70,7 +72,18 @@ export function QuickLogPage() {
       )}
 
       <section>
-        <h2 className="mb-2 text-sm font-medium text-slate-500 dark:text-slate-400">Opponent</h2>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">Opponent</h2>
+          {opponentId && (
+            <button
+              type="button"
+              onClick={() => navigate(`/opponents?expand=${opponentId}`)}
+              className="text-sm text-slate-500 underline underline-offset-2 dark:text-slate-400"
+            >
+              View history
+            </button>
+          )}
+        </div>
         <select
           value={opponentId}
           onChange={(e) => setOpponentId(e.target.value)}
