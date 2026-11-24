@@ -15,9 +15,13 @@ export function RecentFormDots({ outcomes }: { outcomes: BoutOutcome[] }) {
     return <p className="text-sm text-slate-500 dark:text-slate-400">No bouts yet</p>
   }
 
+  // `outcomes` is newest-first, but the dots read left-to-right as a timeline,
+  // so flip to oldest-first for display without changing the data contract.
+  const oldestFirst = [...outcomes].reverse()
+
   return (
     <div className="flex gap-2">
-      {outcomes.map((outcome, i) => (
+      {oldestFirst.map((outcome, i) => (
         <span key={i} title={LABEL[outcome]} className={`h-3.5 w-3.5 rounded-full ${COLOR[outcome]}`} />
       ))}
     </div>
