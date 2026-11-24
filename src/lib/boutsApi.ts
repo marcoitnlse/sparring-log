@@ -13,7 +13,10 @@ export interface CreateBoutInput {
   weapon?: Weapon
   boutFormat?: BoutFormat
   targetScore?: TargetScore
-  notes?: string
+  /** `null` clears the field on update; `undefined` leaves it unchanged. */
+  notesWorked?: string | null
+  notesNotWorked?: string | null
+  notesOther?: string | null
 }
 
 const BOUT_SELECT = '*, opponents(name, handedness)'
@@ -80,7 +83,9 @@ export async function insertBout(userId: string, input: CreateBoutInput): Promis
       weapon: input.weapon ?? 'epee',
       bout_format: input.boutFormat ?? 'free',
       target_score: input.targetScore ?? 15,
-      notes: input.notes ?? null,
+      notes_worked: input.notesWorked ?? null,
+      notes_not_worked: input.notesNotWorked ?? null,
+      notes_other: input.notesOther ?? null,
     })
     .select(BOUT_SELECT)
     .single()
@@ -99,7 +104,9 @@ export async function updateBoutRow(id: string, patch: Partial<CreateBoutInput>)
       ...(patch.weapon !== undefined && { weapon: patch.weapon }),
       ...(patch.boutFormat !== undefined && { bout_format: patch.boutFormat }),
       ...(patch.targetScore !== undefined && { target_score: patch.targetScore }),
-      ...(patch.notes !== undefined && { notes: patch.notes }),
+      ...(patch.notesWorked !== undefined && { notes_worked: patch.notesWorked }),
+      ...(patch.notesNotWorked !== undefined && { notes_not_worked: patch.notesNotWorked }),
+      ...(patch.notesOther !== undefined && { notes_other: patch.notesOther }),
     })
     .eq('id', id)
     .select(BOUT_SELECT)

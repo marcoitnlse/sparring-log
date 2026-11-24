@@ -66,7 +66,9 @@ export interface Database {
           fencer_score: number
           opponent_score: number
           bout_date: string
-          notes: string | null
+          notes_worked: string | null
+          notes_not_worked: string | null
+          notes_other: string | null
           created_at: string
         }
         Insert: {
@@ -79,7 +81,9 @@ export interface Database {
           fencer_score: number
           opponent_score: number
           bout_date?: string
-          notes?: string | null
+          notes_worked?: string | null
+          notes_not_worked?: string | null
+          notes_other?: string | null
           created_at?: string
         }
         Update: {
@@ -92,7 +96,9 @@ export interface Database {
           fencer_score?: number
           opponent_score?: number
           bout_date?: string
-          notes?: string | null
+          notes_worked?: string | null
+          notes_not_worked?: string | null
+          notes_other?: string | null
           created_at?: string
         }
         Relationships: [

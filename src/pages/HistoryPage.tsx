@@ -5,8 +5,10 @@ import type { Bout } from '../lib/boutsApi'
 import { ScoreStepper } from '../components/ScoreStepper'
 import { SegmentedToggle } from '../components/SegmentedToggle'
 import { BoutFormatPicker } from '../components/BoutFormatPicker'
+import { NotesFields } from '../components/NotesFields'
 import { BOUT_FORMAT_LABELS, TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
 import { formatDate } from '../lib/formatDate'
+import { getErrorMessage } from '../lib/errors'
 
 interface EditFormProps {
   bout: Bout
@@ -19,13 +21,17 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
   const scoreForm = useScoreForm(bout.fencer_score, bout.opponent_score, bout.target_score)
   const [boutDate, setBoutDate] = useState(bout.bout_date)
   const [boutFormat, setBoutFormat] = useState(bout.bout_format)
-  const [notes, setNotes] = useState(bout.notes ?? '')
+  const [notesWorked, setNotesWorked] = useState(bout.notes_worked ?? '')
+  const [notesNotWorked, setNotesNotWorked] = useState(bout.notes_not_worked ?? '')
+  const [notesOther, setNotesOther] = useState(bout.notes_other ?? '')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   async function handleSave() {
     if (!scoreForm.checkCanSave()) return
     setSaving(true)
+    setSaveError(null)
     try {
       await onUpdate(bout.id, {
         fencerScore: scoreForm.fencerScore,
@@ -33,9 +39,13 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
         boutDate,
         boutFormat,
         targetScore: scoreForm.targetScore,
-        notes: notes.trim() || undefined,
+        notesWorked: notesWorked.trim() || null,
+        notesNotWorked: notesNotWorked.trim() || null,
+        notesOther: notesOther.trim() || null,
       })
       onClose()
+    } catch (e) {
+      setSaveError(getErrorMessage(e, 'Failed to save changes.'))
     } finally {
       setSaving(false)
     }
@@ -44,9 +54,12 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
   async function handleDelete() {
     if (!window.confirm('Delete this bout? This cannot be undone.')) return
     setDeleting(true)
+    setSaveError(null)
     try {
       await onDelete(bout.id)
       onClose()
+    } catch (e) {
+      setSaveError(getErrorMessage(e, 'Failed to delete bout.'))
     } finally {
       setDeleting(false)
     }
@@ -83,13 +96,15 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
         onChange={(e) => setBoutDate(e.target.value)}
         className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
       />
-      <textarea
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        rows={2}
-        placeholder="Notes"
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+      <NotesFields
+        notesWorked={notesWorked}
+        onNotesWorkedChange={setNotesWorked}
+        notesNotWorked={notesNotWorked}
+        onNotesNotWorkedChange={setNotesNotWorked}
+        notesOther={notesOther}
+        onNotesOtherChange={setNotesOther}
       />
+      {saveError && <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>}
       <div className="flex gap-2">
         <button
           type="button"
