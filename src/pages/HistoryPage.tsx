@@ -5,6 +5,7 @@ import type { Bout } from '../lib/boutsApi'
 import { ScoreStepper } from '../components/ScoreStepper'
 import { SegmentedToggle } from '../components/SegmentedToggle'
 import { BoutFormatPicker } from '../components/BoutFormatPicker'
+import { NotesFields } from '../components/NotesFields'
 import { BOUT_FORMAT_LABELS, TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
 import { formatDate } from '../lib/formatDate'
 
@@ -19,7 +20,9 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
   const scoreForm = useScoreForm(bout.fencer_score, bout.opponent_score, bout.target_score)
   const [boutDate, setBoutDate] = useState(bout.bout_date)
   const [boutFormat, setBoutFormat] = useState(bout.bout_format)
-  const [notes, setNotes] = useState(bout.notes ?? '')
+  const [notesWorked, setNotesWorked] = useState(bout.notes_worked ?? '')
+  const [notesNotWorked, setNotesNotWorked] = useState(bout.notes_not_worked ?? '')
+  const [notesOther, setNotesOther] = useState(bout.notes_other ?? '')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -33,7 +36,9 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
         boutDate,
         boutFormat,
         targetScore: scoreForm.targetScore,
-        notes: notes.trim() || undefined,
+        notesWorked: notesWorked.trim() || undefined,
+        notesNotWorked: notesNotWorked.trim() || undefined,
+        notesOther: notesOther.trim() || undefined,
       })
       onClose()
     } finally {
@@ -83,12 +88,13 @@ function EditForm({ bout, onUpdate, onDelete, onClose }: EditFormProps) {
         onChange={(e) => setBoutDate(e.target.value)}
         className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
       />
-      <textarea
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        rows={2}
-        placeholder="Notes"
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+      <NotesFields
+        notesWorked={notesWorked}
+        onNotesWorkedChange={setNotesWorked}
+        notesNotWorked={notesNotWorked}
+        onNotesNotWorkedChange={setNotesNotWorked}
+        notesOther={notesOther}
+        onNotesOtherChange={setNotesOther}
       />
       <div className="flex gap-2">
         <button

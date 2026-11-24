@@ -5,6 +5,7 @@ import { useScoreForm } from '../hooks/useScoreForm'
 import { ScoreStepper } from '../components/ScoreStepper'
 import { SegmentedToggle } from '../components/SegmentedToggle'
 import { BoutFormatPicker } from '../components/BoutFormatPicker'
+import { NotesFields } from '../components/NotesFields'
 import { TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
 import type { BoutFormat } from '../types/database'
 
@@ -22,7 +23,9 @@ export function QuickLogPage() {
   const [boutFormat, setBoutFormat] = useState<BoutFormat>('free')
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
-  const [notes, setNotes] = useState('')
+  const [notesWorked, setNotesWorked] = useState('')
+  const [notesNotWorked, setNotesNotWorked] = useState('')
+  const [notesOther, setNotesOther] = useState('')
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
@@ -39,13 +42,17 @@ export function QuickLogPage() {
         boutDate,
         boutFormat,
         targetScore: scoreForm.targetScore,
-        notes: notes.trim() || undefined,
+        notesWorked: notesWorked.trim() || undefined,
+        notesNotWorked: notesNotWorked.trim() || undefined,
+        notesOther: notesOther.trim() || undefined,
       })
       setToast(`Bout logged: ${scoreForm.fencerScore}–${scoreForm.opponentScore} vs. ${selected.name}`)
       setTimeout(() => setToast(null), 2500)
       // Keep the opponent selected — sparring is usually several bouts in a row.
       scoreForm.resetScores(0, 0)
-      setNotes('')
+      setNotesWorked('')
+      setNotesNotWorked('')
+      setNotesOther('')
       setShowNotes(false)
       setShowDatePicker(false)
       setBoutDate(todayIso())
@@ -132,13 +139,14 @@ export function QuickLogPage() {
 
       <section>
         {showNotes ? (
-          <textarea
+          <NotesFields
+            notesWorked={notesWorked}
+            onNotesWorkedChange={setNotesWorked}
+            notesNotWorked={notesNotWorked}
+            onNotesNotWorkedChange={setNotesNotWorked}
+            notesOther={notesOther}
+            onNotesOtherChange={setNotesOther}
             autoFocus
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Anything worth remembering about this bout…"
-            rows={3}
-            className="w-full rounded-lg border border-slate-300 px-4 py-3 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           />
         ) : (
           <button
