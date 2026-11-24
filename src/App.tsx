@@ -5,6 +5,7 @@ import { AppLayout } from './components/NavBar'
 import { LoginPage } from './pages/LoginPage'
 import { QuickLogPage } from './pages/QuickLogPage'
 import { HistoryPage } from './pages/HistoryPage'
+import { NextOpponentPage } from './pages/NextOpponentPage'
 import { OpponentsPage } from './pages/OpponentsPage'
 import { StatsPage } from './pages/StatsPage'
 
@@ -25,6 +26,14 @@ export default function App() {
         element={
           <Protected>
             <QuickLogPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/next"
+        element={
+          <Protected>
+            <NextOpponentPage />
           </Protected>
         }
       />

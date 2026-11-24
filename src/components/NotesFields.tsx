@@ -1,3 +1,5 @@
+import { NOTE_CATEGORIES, type NoteColumn } from '../lib/boutNotes'
+
 interface NotesFieldsProps {
   notesWorked: string
   onNotesWorkedChange: (value: string) => void
@@ -26,39 +28,27 @@ export function NotesFields({
   onNotesOtherChange,
   autoFocus,
 }: NotesFieldsProps) {
+  const fields: Record<NoteColumn, { value: string; onChange: (value: string) => void }> = {
+    notes_worked: { value: notesWorked, onChange: onNotesWorkedChange },
+    notes_not_worked: { value: notesNotWorked, onChange: onNotesNotWorkedChange },
+    notes_other: { value: notesOther, onChange: onNotesOtherChange },
+  }
+
   return (
     <div className="divide-y divide-slate-200 rounded-lg border border-slate-300 dark:divide-slate-800 dark:border-slate-700">
-      <label className="block">
-        <span className={LABEL_CLASSES}>What worked</span>
-        <textarea
-          autoFocus={autoFocus}
-          value={notesWorked}
-          onChange={(e) => onNotesWorkedChange(e.target.value)}
-          placeholder="Tactics or setups that landed…"
-          rows={2}
-          className={FIELD_CLASSES}
-        />
-      </label>
-      <label className="block">
-        <span className={LABEL_CLASSES}>What didn't work</span>
-        <textarea
-          value={notesNotWorked}
-          onChange={(e) => onNotesNotWorkedChange(e.target.value)}
-          placeholder="What they countered, or what to drop…"
-          rows={2}
-          className={FIELD_CLASSES}
-        />
-      </label>
-      <label className="block">
-        <span className={LABEL_CLASSES}>Other comments</span>
-        <textarea
-          value={notesOther}
-          onChange={(e) => onNotesOtherChange(e.target.value)}
-          placeholder="Anything else worth remembering…"
-          rows={2}
-          className={FIELD_CLASSES}
-        />
-      </label>
+      {NOTE_CATEGORIES.map(({ column, label, placeholder }, i) => (
+        <label key={column} className="block">
+          <span className={LABEL_CLASSES}>{label}</span>
+          <textarea
+            autoFocus={autoFocus && i === 0}
+            value={fields[column].value}
+            onChange={(e) => fields[column].onChange(e.target.value)}
+            placeholder={placeholder}
+            rows={2}
+            className={FIELD_CLASSES}
+          />
+        </label>
+      ))}
     </div>
   )
 }
