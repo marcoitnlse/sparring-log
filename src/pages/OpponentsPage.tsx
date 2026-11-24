@@ -16,14 +16,29 @@ function handednessLabel(h: Handedness | null) {
   return h === 'right' ? 'R' : h === 'left' ? 'L' : null
 }
 
-/** Last 5 bouts against an opponent, reverse-chronological (as `bouts`
- * already is), with any notes shown inline right under the score — this
- * list is already short, so there's nothing gained by hiding notes behind
- * a further tap. Bouts with no notes at all render exactly as before. */
+const INITIAL_VISIBLE_BOUTS = 5
+
+/** Bouts against an opponent, reverse-chronological (as `bouts` already
+ * is), with any notes shown inline right under the score. Starts at the
+ * last 5, with a "Show all" so notes from earlier sessions are still
+ * reachable — one sparring session alone can be 5+ bouts. */
 function BoutHistoryList({ bouts }: { bouts: Bout[] }) {
+  const [showAll, setShowAll] = useState(false)
+
+  if (bouts.length === 0) {
+    return (
+      <p className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-400">
+        No bouts yet.
+      </p>
+    )
+  }
+
+  const visible = showAll ? bouts : bouts.slice(0, INITIAL_VISIBLE_BOUTS)
+  const hiddenCount = bouts.length - visible.length
+
   return (
     <ul className="divide-y divide-slate-200 border-t border-slate-200 bg-slate-50 dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900/50">
-      {bouts.map((bout) => {
+      {visible.map((bout) => {
         const won = bout.fencer_score > bout.opponent_score
         const noteLines = [
           { label: 'What worked', text: bout.notes_worked },
@@ -44,7 +59,7 @@ function BoutHistoryList({ bouts }: { bouts: Bout[] }) {
             {noteLines.length > 0 && (
               <div className="mt-1 space-y-0.5">
                 {noteLines.map(({ label, text }) => (
-                  <p key={label} className="text-slate-600 dark:text-slate-300">
+                  <p key={label} className="break-words whitespace-pre-wrap text-slate-600 dark:text-slate-300">
                     <span className="font-bold">{label}:</span> {text}
                   </p>
                 ))}
@@ -53,6 +68,17 @@ function BoutHistoryList({ bouts }: { bouts: Bout[] }) {
           </li>
         )
       })}
+      {hiddenCount > 0 && (
+        <li>
+          <button
+            type="button"
+            onClick={() => setShowAll(true)}
+            className="w-full px-4 py-2 text-left text-sm text-slate-500 underline underline-offset-2 dark:text-slate-400"
+          >
+            Show all ({hiddenCount} older)
+          </button>
+        </li>
+      )}
     </ul>
   )
 }
@@ -140,24 +166,28 @@ function EditOpponentForm({ opponent, onUpdate, onDelete, onClose }: EditOpponen
 
 export function OpponentsPage() {
   const { opponents, loading, error, createOpponent, updateOpponent, deleteOpponent } = useOpponents()
-  const { bouts } = useBouts()
+  const { bouts, loading: boutsLoading } = useBouts()
   const [showAddForm, setShowAddForm] = useState(false)
   const [name, setName] = useState('')
   const [newHandedness, setNewHandedness] = useState<Handedness>('right')
   const [saving, setSaving] = useState(false)
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [expandedId, setExpandedId] = useState<string | null>(() => searchParams.get('expand'))
   const [editingId, setEditingId] = useState<string | null>(null)
 
   const byOpponent = useMemo(() => groupBoutsByOpponent(bouts), [bouts])
 
   // Deep-linked here (e.g. from QuickLogPage's "View history") with
-  // ?expand=<opponentId> — scroll that opponent into view once loaded.
+  // ?expand=<opponentId> — scroll that opponent into view once its row has
+  // rendered, then drop the param so later refetches don't jump back to it.
   useEffect(() => {
     const id = searchParams.get('expand')
     if (!id) return
-    document.getElementById(`opponent-${id}`)?.scrollIntoView({ block: 'center' })
-  }, [searchParams, opponents])
+    const row = document.getElementById(`opponent-${id}`)
+    if (!row) return
+    row.scrollIntoView({ block: 'center' })
+    setSearchParams({}, { replace: true })
+  }, [searchParams, setSearchParams, opponents])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -235,7 +265,10 @@ export function OpponentsPage() {
             return (
               <li key={o.id} id={`opponent-${o.id}`}>
                 <div
-                  onClick={() => hasBouts && setExpandedId(expandedId === o.id ? null : o.id)}
+                  onClick={() => {
+                    // Also collapsible when deep-linked open with no bouts.
+                    if (hasBouts || expandedId === o.id) setExpandedId(expandedId === o.id ? null : o.id)
+                  }}
                   className={`flex items-center justify-between px-4 py-3 ${
                     hasBouts ? 'active:bg-slate-100 dark:active:bg-slate-900' : ''
                   }`}
@@ -278,7 +311,7 @@ export function OpponentsPage() {
                     onClose={() => setEditingId(null)}
                   />
                 )}
-                {expandedId === o.id && <BoutHistoryList bouts={group.slice(0, 5)} />}
+                {expandedId === o.id && !boutsLoading && <BoutHistoryList bouts={group} />}
               </li>
             )
           })}

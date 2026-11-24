@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOpponents } from '../hooks/useOpponents'
 import { useBouts } from '../hooks/useBouts'
@@ -8,28 +8,75 @@ import { SegmentedToggle } from '../components/SegmentedToggle'
 import { BoutFormatPicker } from '../components/BoutFormatPicker'
 import { NotesFields } from '../components/NotesFields'
 import { TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
-import type { BoutFormat } from '../types/database'
+import { getErrorMessage } from '../lib/errors'
+import type { BoutFormat, TargetScore } from '../types/database'
 
+/** Local calendar date — toISOString() would give the UTC date, which is
+ * the wrong day for anyone logging near midnight outside UTC. */
 function todayIso() {
-  return new Date().toISOString().slice(0, 10)
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+
+interface QuickLogDraft {
+  opponentId: string
+  fencerScore: number
+  opponentScore: number
+  targetScore: TargetScore
+  boutDate: string
+  showDatePicker: boolean
+  boutFormat: BoutFormat
+  showNotes: boolean
+  notesWorked: string
+  notesNotWorked: string
+  notesOther: string
+}
+
+// Kept outside the component so an unsaved bout survives leaving the Log
+// screen (e.g. "View history" to check past notes) and coming back.
+// In-memory only: a full reload starts fresh.
+let savedDraft: QuickLogDraft | null = null
 
 export function QuickLogPage() {
   const navigate = useNavigate()
   const { opponents } = useOpponents()
   const { createBout } = useBouts({ skipInitialFetch: true })
-  const scoreForm = useScoreForm(0, 0, 15)
+  const [draft] = useState(() => savedDraft)
+  const scoreForm = useScoreForm(draft?.fencerScore ?? 0, draft?.opponentScore ?? 0, draft?.targetScore ?? 15)
 
-  const [opponentId, setOpponentId] = useState('')
-  const [boutDate, setBoutDate] = useState(todayIso())
-  const [boutFormat, setBoutFormat] = useState<BoutFormat>('free')
-  const [showDatePicker, setShowDatePicker] = useState(false)
-  const [showNotes, setShowNotes] = useState(false)
-  const [notesWorked, setNotesWorked] = useState('')
-  const [notesNotWorked, setNotesNotWorked] = useState('')
-  const [notesOther, setNotesOther] = useState('')
+  const [opponentId, setOpponentId] = useState(draft?.opponentId ?? '')
+  const [showDatePicker, setShowDatePicker] = useState(draft?.showDatePicker ?? false)
+  // An untouched date means "today", so don't restore a stale one.
+  const [boutDate, setBoutDate] = useState(draft?.showDatePicker ? draft.boutDate : todayIso())
+  const [boutFormat, setBoutFormat] = useState<BoutFormat>(draft?.boutFormat ?? 'free')
+  const [showNotes, setShowNotes] = useState(draft?.showNotes ?? false)
+  const [notesWorked, setNotesWorked] = useState(draft?.notesWorked ?? '')
+  const [notesNotWorked, setNotesNotWorked] = useState(draft?.notesNotWorked ?? '')
+  const [notesOther, setNotesOther] = useState(draft?.notesOther ?? '')
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+
+  const { fencerScore, opponentScore, targetScore } = scoreForm
+  useEffect(() => {
+    savedDraft = {
+      opponentId,
+      fencerScore,
+      opponentScore,
+      targetScore,
+      boutDate,
+      showDatePicker,
+      boutFormat,
+      showNotes,
+      notesWorked,
+      notesNotWorked,
+      notesOther,
+    }
+  }, [opponentId, fencerScore, opponentScore, targetScore, boutDate, showDatePicker, boutFormat, showNotes, notesWorked, notesNotWorked, notesOther])
+
+  function showToast(message: string, durationMs = 2500) {
+    setToast(message)
+    setTimeout(() => setToast(null), durationMs)
+  }
 
   async function handleSave() {
     const selected = opponents.find((o) => o.id === opponentId)
@@ -48,8 +95,7 @@ export function QuickLogPage() {
         notesNotWorked: notesNotWorked.trim() || undefined,
         notesOther: notesOther.trim() || undefined,
       })
-      setToast(`Bout logged: ${scoreForm.fencerScore}–${scoreForm.opponentScore} vs. ${selected.name}`)
-      setTimeout(() => setToast(null), 2500)
+      showToast(`Bout logged: ${scoreForm.fencerScore}–${scoreForm.opponentScore} vs. ${selected.name}`)
       // Keep the opponent selected — sparring is usually several bouts in a row.
       scoreForm.resetScores(0, 0)
       setNotesWorked('')
@@ -58,6 +104,8 @@ export function QuickLogPage() {
       setShowNotes(false)
       setShowDatePicker(false)
       setBoutDate(todayIso())
+    } catch (e) {
+      showToast(`Not saved: ${getErrorMessage(e, 'something went wrong')}`, 5000)
     } finally {
       setSaving(false)
     }

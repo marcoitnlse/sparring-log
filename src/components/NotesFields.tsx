@@ -8,8 +8,10 @@ interface NotesFieldsProps {
   autoFocus?: boolean
 }
 
+const LABEL_CLASSES = 'block px-4 pt-2 text-xs font-bold text-slate-500 dark:text-slate-400'
+
 const FIELD_CLASSES =
-  'w-full resize-none bg-transparent px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-slate-100 dark:placeholder:text-slate-500'
+  'block w-full resize-none bg-transparent px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-slate-100 dark:placeholder:text-slate-500'
 
 /** One bordered card holding all three note fields, so it reads as a single
  * "Notes" section with structure rather than three unrelated inputs — only
@@ -26,8 +28,8 @@ export function NotesFields({
 }: NotesFieldsProps) {
   return (
     <div className="divide-y divide-slate-200 rounded-lg border border-slate-300 dark:divide-slate-800 dark:border-slate-700">
-      <div>
-        <p className="px-4 pt-2 text-xs font-bold text-slate-500 dark:text-slate-400">What worked</p>
+      <label className="block">
+        <span className={LABEL_CLASSES}>What worked</span>
         <textarea
           autoFocus={autoFocus}
           value={notesWorked}
@@ -36,9 +38,9 @@ export function NotesFields({
           rows={2}
           className={FIELD_CLASSES}
         />
-      </div>
-      <div>
-        <p className="px-4 pt-2 text-xs font-bold text-slate-500 dark:text-slate-400">What didn't work</p>
+      </label>
+      <label className="block">
+        <span className={LABEL_CLASSES}>What didn't work</span>
         <textarea
           value={notesNotWorked}
           onChange={(e) => onNotesNotWorkedChange(e.target.value)}
@@ -46,9 +48,9 @@ export function NotesFields({
           rows={2}
           className={FIELD_CLASSES}
         />
-      </div>
-      <div>
-        <p className="px-4 pt-2 text-xs font-bold text-slate-500 dark:text-slate-400">Other comments</p>
+      </label>
+      <label className="block">
+        <span className={LABEL_CLASSES}>Other comments</span>
         <textarea
           value={notesOther}
           onChange={(e) => onNotesOtherChange(e.target.value)}
@@ -56,7 +58,7 @@ export function NotesFields({
           rows={2}
           className={FIELD_CLASSES}
         />
-      </div>
+      </label>
     </div>
   )
 }

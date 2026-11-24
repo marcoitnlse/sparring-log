@@ -13,9 +13,10 @@ export interface CreateBoutInput {
   weapon?: Weapon
   boutFormat?: BoutFormat
   targetScore?: TargetScore
-  notesWorked?: string
-  notesNotWorked?: string
-  notesOther?: string
+  /** `null` clears the field on update; `undefined` leaves it unchanged. */
+  notesWorked?: string | null
+  notesNotWorked?: string | null
+  notesOther?: string | null
 }
 
 const BOUT_SELECT = '*, opponents(name, handedness)'
