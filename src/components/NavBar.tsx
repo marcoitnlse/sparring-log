@@ -6,6 +6,7 @@ import { ProfileSettings } from './ProfileSettings'
 
 const TABS = [
   { to: '/', label: 'Log', icon: '✚' },
+  { to: '/next', label: 'Next', icon: '🎯' },
   { to: '/history', label: 'History', icon: '📋' },
   { to: '/opponents', label: 'Opponents', icon: '🤺' },
   { to: '/stats', label: 'Stats', icon: '📊' },

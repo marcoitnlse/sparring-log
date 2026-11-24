@@ -107,11 +107,12 @@ This schema already supports the deferred features with no migration needed: hea
 |---|---|---|
 | `/login` | Login/Signup | Unprotected entry point |
 | `/` | **Quick Log Bout (home)** | Speed-optimized bout entry — opens first after login |
+| `/next` | Next Opponent | Pre-bout review: pick who you're fencing next and see every note against them, grouped by category (What worked / What didn't work / Other comments), each dated, newest first. Picking also pre-selects them on the Log screen |
 | `/history` | Bout History | Date-grouped, paginated ("Load more") list, tap a bout to edit or delete it |
-| `/opponents` | Opponents | Add (collapsed behind a button)/edit/delete opponents (name, handedness); each row shows head-to-head record + recent-form dots, tap to expand the last 5 bouts against them |
+| `/opponents` | Opponents | Add (collapsed behind a button)/edit/delete opponents (name, handedness); each row shows head-to-head record + recent-form dots, tap to expand the last 5 bouts against them (with their notes inline, and "Show all" for older ones) |
 | `/stats` | Stats & Profile | Filterable record (by opponent, match format, target score, opponent handedness), touches scored/conceded/margin, and display-name edit |
 
-Bottom tab bar nav (Log / History / Opponents / Stats), thumb-reachable, hidden on `/login`.
+Bottom tab bar nav (Log / Next / History / Opponents / Stats), thumb-reachable, hidden on `/login`.
 
 ## Quick-Log-Bout UX (`/`, the home screen)
 
@@ -121,10 +122,10 @@ Target: one-handed, ~10 seconds, right after a bout at the strip.
 2. **Score entry** — two large numeric inputs ("You" / "Opponent"), `inputmode="numeric"`, default 0–0, clamped to the selected target score (can't type in more than the bout was fenced to). Equal scores block Save with an inline message — fencing has no draws, ties resolve via sudden death — and changing the target score after entering scores clamps both down if they'd now exceed it.
 3. **Date** — defaults to today, shown small/collapsed; tap opens a native date input only when backdating is needed.
 4. **Weapon** — single-option segmented control pre-selected to "Épée," present but requiring zero interaction normally.
-5. **Notes** — optional, behind a "+ Add note" disclosure toggle.
+5. **Notes** — optional, behind a "+ Add note" disclosure toggle; one card with three fields (What worked / What didn't work / Other comments).
 6. **Save** — sticky full-width button pinned to the bottom of the viewport.
 
-**Post-save**: toast confirmation ("Bout logged: 5–3 vs. Alex"), form resets scores/notes but **keeps the opponent selected** (sparring is usually several bouts vs. the same partner in a row) — next bout is 2 taps away. Stays on `/`, no navigation.
+**Post-save**: toast confirmation ("Bout logged: 5–3 vs. Alex"), form resets scores/notes but **keeps the opponent selected** (sparring is usually several bouts vs. the same partner in a row) — next bout is 2 taps away. Stays on `/`, no navigation. An unsaved bout is kept in memory if you switch tabs and come back (lost on a full reload).
 
 ## Folder Structure
 

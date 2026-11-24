@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useOpponents } from '../hooks/useOpponents'
 import { useBouts } from '../hooks/useBouts'
 import { useScoreForm } from '../hooks/useScoreForm'
@@ -9,7 +8,8 @@ import { BoutFormatPicker } from '../components/BoutFormatPicker'
 import { NotesFields } from '../components/NotesFields'
 import { TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
 import { getErrorMessage } from '../lib/errors'
-import type { BoutFormat, TargetScore } from '../types/database'
+import { getQuickLogDraft, saveQuickLogDraft } from '../lib/quickLogDraft'
+import type { BoutFormat } from '../types/database'
 
 /** Local calendar date — toISOString() would give the UTC date, which is
  * the wrong day for anyone logging near midnight outside UTC. */
@@ -18,47 +18,27 @@ function todayIso() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-interface QuickLogDraft {
-  opponentId: string
-  fencerScore: number
-  opponentScore: number
-  targetScore: TargetScore
-  boutDate: string
-  showDatePicker: boolean
-  boutFormat: BoutFormat
-  showNotes: boolean
-  notesWorked: string
-  notesNotWorked: string
-  notesOther: string
-}
-
-// Kept outside the component so an unsaved bout survives leaving the Log
-// screen (e.g. "View history" to check past notes) and coming back.
-// In-memory only: a full reload starts fresh.
-let savedDraft: QuickLogDraft | null = null
-
 export function QuickLogPage() {
-  const navigate = useNavigate()
   const { opponents } = useOpponents()
   const { createBout } = useBouts({ skipInitialFetch: true })
-  const [draft] = useState(() => savedDraft)
-  const scoreForm = useScoreForm(draft?.fencerScore ?? 0, draft?.opponentScore ?? 0, draft?.targetScore ?? 15)
+  const [draft] = useState(getQuickLogDraft)
+  const scoreForm = useScoreForm(draft.fencerScore ?? 0, draft.opponentScore ?? 0, draft.targetScore ?? 15)
 
-  const [opponentId, setOpponentId] = useState(draft?.opponentId ?? '')
-  const [showDatePicker, setShowDatePicker] = useState(draft?.showDatePicker ?? false)
+  const [opponentId, setOpponentId] = useState(draft.opponentId ?? '')
+  const [showDatePicker, setShowDatePicker] = useState(draft.showDatePicker ?? false)
   // An untouched date means "today", so don't restore a stale one.
-  const [boutDate, setBoutDate] = useState(draft?.showDatePicker ? draft.boutDate : todayIso())
-  const [boutFormat, setBoutFormat] = useState<BoutFormat>(draft?.boutFormat ?? 'free')
-  const [showNotes, setShowNotes] = useState(draft?.showNotes ?? false)
-  const [notesWorked, setNotesWorked] = useState(draft?.notesWorked ?? '')
-  const [notesNotWorked, setNotesNotWorked] = useState(draft?.notesNotWorked ?? '')
-  const [notesOther, setNotesOther] = useState(draft?.notesOther ?? '')
+  const [boutDate, setBoutDate] = useState(draft.showDatePicker && draft.boutDate ? draft.boutDate : todayIso())
+  const [boutFormat, setBoutFormat] = useState<BoutFormat>(draft.boutFormat ?? 'free')
+  const [showNotes, setShowNotes] = useState(draft.showNotes ?? false)
+  const [notesWorked, setNotesWorked] = useState(draft.notesWorked ?? '')
+  const [notesNotWorked, setNotesNotWorked] = useState(draft.notesNotWorked ?? '')
+  const [notesOther, setNotesOther] = useState(draft.notesOther ?? '')
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   const { fencerScore, opponentScore, targetScore } = scoreForm
   useEffect(() => {
-    savedDraft = {
+    saveQuickLogDraft({
       opponentId,
       fencerScore,
       opponentScore,
@@ -70,7 +50,7 @@ export function QuickLogPage() {
       notesWorked,
       notesNotWorked,
       notesOther,
-    }
+    })
   }, [opponentId, fencerScore, opponentScore, targetScore, boutDate, showDatePicker, boutFormat, showNotes, notesWorked, notesNotWorked, notesOther])
 
   function showToast(message: string, durationMs = 2500) {
@@ -120,18 +100,7 @@ export function QuickLogPage() {
       )}
 
       <section>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">Opponent</h2>
-          {opponentId && (
-            <button
-              type="button"
-              onClick={() => navigate(`/opponents?expand=${opponentId}`)}
-              className="text-sm text-slate-500 underline underline-offset-2 dark:text-slate-400"
-            >
-              View history
-            </button>
-          )}
-        </div>
+        <h2 className="mb-2 text-sm font-medium text-slate-500 dark:text-slate-400">Opponent</h2>
         <select
           value={opponentId}
           onChange={(e) => setOpponentId(e.target.value)}
