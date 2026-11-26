@@ -5,6 +5,7 @@ import {
   computeBoutStats,
   computeSessionFormTrend,
   computeTrendWindow,
+  computeWeeklyFormTrend,
   filterBouts,
   TREND_RANGE_OPTIONS,
   type TrendRange,
@@ -63,6 +64,10 @@ export function StatsPage() {
   const trendWindow = useMemo(() => computeTrendWindow(trendRange, filteredBouts), [trendRange, filteredBouts])
   const sessions = useMemo(
     () => computeSessionFormTrend(filteredBouts, { since: trendWindow.start }),
+    [filteredBouts, trendWindow],
+  )
+  const weeks = useMemo(
+    () => computeWeeklyFormTrend(filteredBouts, { since: trendWindow.start }),
     [filteredBouts, trendWindow],
   )
 
@@ -130,7 +135,7 @@ export function StatsPage() {
               <SegmentedToggle options={TREND_RANGE_OPTIONS} value={trendRange} onChange={setTrendRange} />
             </div>
             <div className="rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900">
-              <FormTrendChart sessions={sessions} period={trendWindow} />
+              <FormTrendChart sessions={sessions} weeks={weeks} period={trendWindow} />
             </div>
           </section>
 

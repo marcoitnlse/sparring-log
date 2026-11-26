@@ -200,3 +200,37 @@ export function computeTrendWindow(range: TrendRange, bouts: Bout[], today: stri
   const start = range === 'all' ? earliest : addMonths(today, -RANGE_MONTHS[range])
   return { start: mondayOf(start), end: latest }
 }
+
+export interface WeeklyFormPoint {
+  /** Monday of the Monday–Sunday week. */
+  weekStart: string
+  wins: number
+  losses: number
+  /** All wins this week over all bouts this week, 0-100 — pooled, so a
+   * big session counts for more than a single-bout one. */
+  winRatePct: number
+}
+
+/** One point per Monday–Sunday week that has at least one bout, oldest
+ * first. Weeks without bouts are left out, not counted as zero — the
+ * chart shows them as gaps. */
+export function computeWeeklyFormTrend(bouts: Bout[], options: { since?: string } = {}): WeeklyFormPoint[] {
+  const byWeek = new Map<string, { wins: number; losses: number }>()
+  for (const bout of bouts) {
+    if (options.since && bout.bout_date < options.since) continue
+    const weekStart = mondayOf(bout.bout_date)
+    const entry = byWeek.get(weekStart) ?? { wins: 0, losses: 0 }
+    if (outcomeOf(bout) === 'win') entry.wins++
+    else entry.losses++
+    byWeek.set(weekStart, entry)
+  }
+
+  return [...byWeek.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([weekStart, { wins, losses }]) => ({
+      weekStart,
+      wins,
+      losses,
+      winRatePct: Math.round((wins / (wins + losses)) * 1000) / 10,
+    }))
+}

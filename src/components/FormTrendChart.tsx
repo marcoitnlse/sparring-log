@@ -1,5 +1,5 @@
-import type { SessionFormPoint, TrendWindow } from '../lib/boutStats'
-import { addMonths, daysBetween, parseIsoDate } from '../lib/isoDate'
+import type { SessionFormPoint, TrendWindow, WeeklyFormPoint } from '../lib/boutStats'
+import { addDays, addMonths, daysBetween, parseIsoDate } from '../lib/isoDate'
 
 const WIDTH = 300
 const HEIGHT = 112
@@ -48,14 +48,34 @@ function toSegments(points: PlottedPoint[]): PlottedPoint[][] {
   return segments
 }
 
+/** Splits weeks into runs of back-to-back weeks — a week with no bouts
+ * breaks the weekly line rather than being bridged. */
+function toWeekRuns(weeks: WeeklyFormPoint[]): WeeklyFormPoint[][] {
+  const runs: WeeklyFormPoint[][] = []
+  weeks.forEach((week, i) => {
+    if (i > 0 && addDays(weeks[i - 1].weekStart, 7) === week.weekStart) runs[runs.length - 1].push(week)
+    else runs.push([week])
+  })
+  return runs
+}
+
 /** Win-rate trend across training sessions in the selected period: a
  * smoothed rolling-average line with each session's raw (noisier) ratio
  * plotted as a dot and a thin connecting line, so a single standout day
  * doesn't get hidden by the average. The x-axis is the whole period, day
  * by day (each session sits mid-day), so empty stretches read as time
  * without fencing, and a training break shows as a gap in both lines
- * rather than a line drawn straight through it. */
-export function FormTrendChart({ sessions, period }: { sessions: SessionFormPoint[]; period: TrendWindow }) {
+ * rather than a line drawn straight through it. An orange step line adds
+ * the Monday–Sunday weekly average, each week drawn flat across its days. */
+export function FormTrendChart({
+  sessions,
+  weeks,
+  period,
+}: {
+  sessions: SessionFormPoint[]
+  weeks: WeeklyFormPoint[]
+  period: TrendWindow
+}) {
   if (sessions.length === 0) {
     return <p className="text-sm text-slate-500 dark:text-slate-400">No sessions in this period.</p>
   }
@@ -71,6 +91,15 @@ export function FormTrendChart({ sessions, period }: { sessions: SessionFormPoin
     x: xForDate(session.date, 0.5),
   }))
   const segments = toSegments(points)
+
+  // Each week spans Monday 00:00 to the next Monday 00:00, clipped to the
+  // period so the current week stops at today.
+  const weekSpan = (week: WeeklyFormPoint) => ({
+    x0: Math.max(xForDay(0), xForDate(week.weekStart)),
+    x1: Math.min(xForDay(totalDays), xForDate(addDays(week.weekStart, 7))),
+    y: yFor(week.winRatePct),
+  })
+  const weekRuns = toWeekRuns(weeks)
 
   // Label both ends of the period, and each month start in between,
   // skipping any that would sit too close to a neighbor to stay readable.
@@ -163,6 +192,30 @@ export function FormTrendChart({ sessions, period }: { sessions: SessionFormPoin
           strokeLinejoin="round"
         />
       ))}
+      {weekRuns.map((run) => (
+        <polyline
+          key={`weekly-${run[0].weekStart}`}
+          points={run
+            .map(weekSpan)
+            .map(({ x0, x1, y }) => `${x0},${y} ${x1},${y}`)
+            .join(' ')}
+          fill="none"
+          className="stroke-orange-500 dark:stroke-orange-400"
+          strokeWidth={2}
+          strokeLinejoin="round"
+        />
+      ))}
+      {weeks.map((week) => {
+        const { x0, x1, y } = weekSpan(week)
+        // Invisible, wider hit area so the week's tooltip is easy to hover.
+        return (
+          <line key={`weekly-hit-${week.weekStart}`} x1={x0} x2={x1} y1={y} y2={y} stroke="transparent" strokeWidth={8}>
+            <title>
+              Week of {formatShortDate(week.weekStart)}: {week.winRatePct}% ({week.wins}W-{week.losses}L)
+            </title>
+          </line>
+        )
+      })}
       {points.map((p) => (
         <circle
           key={p.session.date}

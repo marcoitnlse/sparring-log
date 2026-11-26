@@ -3,6 +3,7 @@ import {
   computeBoutStats,
   computeSessionFormTrend,
   computeTrendWindow,
+  computeWeeklyFormTrend,
   filterBouts,
   groupBoutsByOpponent,
   outcomeOf,
@@ -291,5 +292,32 @@ describe('computeTrendWindow', () => {
 
   it('extends the end to a bout dated after today', () => {
     expect(computeTrendWindow('1m', [makeBout({ bout_date: '2026-11-28' })], today).end).toBe('2026-11-28')
+  })
+})
+
+describe('computeWeeklyFormTrend', () => {
+  it('groups bouts into Monday–Sunday weeks, oldest first, pooled over bouts', () => {
+    const trend = computeWeeklyFormTrend([
+      makeBout({ bout_date: '2026-11-29', fencer_score: 8, opponent_score: 15 }), // Sun, week of 11-23
+      makeBout({ bout_date: '2026-11-30', fencer_score: 15, opponent_score: 10 }), // Mon, week of 11-30
+      makeBout({ bout_date: '2026-11-23', fencer_score: 15, opponent_score: 10 }), // Mon, week of 11-23
+      makeBout({ bout_date: '2026-11-25', fencer_score: 8, opponent_score: 15 }), // Wed, week of 11-23
+    ])
+    expect(trend).toEqual([
+      { weekStart: '2026-11-23', wins: 1, losses: 2, winRatePct: 33.3 },
+      { weekStart: '2026-11-30', wins: 1, losses: 0, winRatePct: 100 },
+    ])
+  })
+
+  it('leaves out weeks without bouts and bouts before `since`', () => {
+    const trend = computeWeeklyFormTrend(
+      [
+        makeBout({ bout_date: '2026-10-01' }),
+        makeBout({ bout_date: '2026-10-20' }),
+        makeBout({ bout_date: '2026-11-10' }),
+      ],
+      { since: '2026-10-19' },
+    )
+    expect(trend.map((w) => w.weekStart)).toEqual(['2026-10-19', '2026-11-09'])
   })
 })
