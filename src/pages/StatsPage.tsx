@@ -1,7 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useBouts } from '../hooks/useBouts'
 import { useOpponents } from '../hooks/useOpponents'
-import { computeBoutStats, computeSessionFormTrend, filterBouts } from '../lib/boutStats'
+import {
+  computeBoutStats,
+  computeSessionFormTrend,
+  computeTrendWindow,
+  filterBouts,
+  TREND_RANGE_OPTIONS,
+  type TrendRange,
+} from '../lib/boutStats'
 import { SegmentedToggle } from '../components/SegmentedToggle'
 import { FormTrendChart } from '../components/FormTrendChart'
 import {
@@ -30,6 +37,7 @@ export function StatsPage() {
   const [targetFilter, setTargetFilter] = useState<TargetScoreFilter>('all')
   const [handednessFilter, setHandednessFilter] = useState<HandednessFilter>('all')
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [trendRange, setTrendRange] = useState<TrendRange>('3m')
 
   const activeFilterCount = [
     opponentFilter !== 'all',
@@ -50,7 +58,13 @@ export function StatsPage() {
   )
 
   const stats = useMemo(() => computeBoutStats(filteredBouts), [filteredBouts])
-  const sessions = useMemo(() => computeSessionFormTrend(filteredBouts), [filteredBouts])
+  // The range only narrows the chart — the tiles above and below it keep
+  // covering every bout that matches the filters.
+  const trendWindow = useMemo(() => computeTrendWindow(trendRange, filteredBouts), [trendRange, filteredBouts])
+  const sessions = useMemo(
+    () => computeSessionFormTrend(filteredBouts, { since: trendWindow.start }),
+    [filteredBouts, trendWindow],
+  )
 
   return (
     <div className="space-y-6 p-4">
@@ -111,9 +125,12 @@ export function StatsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-sm font-medium text-slate-500 dark:text-slate-400">Form trend</h2>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">Form trend</h2>
+              <SegmentedToggle options={TREND_RANGE_OPTIONS} value={trendRange} onChange={setTrendRange} />
+            </div>
             <div className="rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900">
-              <FormTrendChart sessions={sessions} />
+              <FormTrendChart sessions={sessions} period={trendWindow} />
             </div>
           </section>
 

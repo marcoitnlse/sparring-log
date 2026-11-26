@@ -9,14 +9,8 @@ import { NotesFields } from '../components/NotesFields'
 import { TARGET_SCORE_OPTIONS } from '../lib/boutOptions'
 import { getErrorMessage } from '../lib/errors'
 import { getQuickLogDraft, saveQuickLogDraft } from '../lib/quickLogDraft'
+import { todayIso } from '../lib/isoDate'
 import type { BoutFormat } from '../types/database'
-
-/** Local calendar date — toISOString() would give the UTC date, which is
- * the wrong day for anyone logging near midnight outside UTC. */
-function todayIso() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 export function QuickLogPage() {
   const { opponents } = useOpponents()

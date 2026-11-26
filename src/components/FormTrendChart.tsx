@@ -1,4 +1,5 @@
-import type { SessionFormPoint } from '../lib/boutStats'
+import type { SessionFormPoint, TrendWindow } from '../lib/boutStats'
+import { addMonths, daysBetween, parseIsoDate } from '../lib/isoDate'
 
 const WIDTH = 300
 const HEIGHT = 112
@@ -15,20 +16,15 @@ function yFor(pct: number): number {
   return PAD_TOP + (1 - pct / 100) * (HEIGHT - PAD_TOP - PAD_BOTTOM)
 }
 
-function toTimestamp(iso: string): number {
-  return new Date(iso + 'T00:00:00').getTime()
-}
-
 function formatShortDate(iso: string): string {
-  return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return parseIsoDate(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-function formatMonthOnly(iso: string): string {
-  return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'short' })
-}
-
-function monthOf(iso: string): number {
-  return new Date(iso + 'T00:00:00').getMonth()
+/** Month name, or the year for January so a multi-year "All" view still
+ * reads unambiguously. */
+function formatMonthStart(iso: string): string {
+  const d = parseIsoDate(iso)
+  return d.getMonth() === 0 ? String(d.getFullYear()) : d.toLocaleDateString(undefined, { month: 'short' })
 }
 
 interface PlottedPoint {
@@ -52,53 +48,44 @@ function toSegments(points: PlottedPoint[]): PlottedPoint[][] {
   return segments
 }
 
-/** Sparkline of win-rate trend across recent training sessions: a smoothed
- * rolling-average line with each session's raw (noisier) ratio plotted as
- * a dot and a thin connecting line, so a single standout day doesn't get
- * hidden by the average. Points are spaced by actual elapsed time (not
- * just session order), and a training break — a gap longer than the data
- * already flags — shows as a gap in both lines rather than a line drawn
- * straight through it. */
-export function FormTrendChart({ sessions }: { sessions: SessionFormPoint[] }) {
+/** Win-rate trend across training sessions in the selected period: a
+ * smoothed rolling-average line with each session's raw (noisier) ratio
+ * plotted as a dot and a thin connecting line, so a single standout day
+ * doesn't get hidden by the average. The x-axis is the whole period, day
+ * by day (each session sits mid-day), so empty stretches read as time
+ * without fencing, and a training break shows as a gap in both lines
+ * rather than a line drawn straight through it. */
+export function FormTrendChart({ sessions, period }: { sessions: SessionFormPoint[]; period: TrendWindow }) {
   if (sessions.length === 0) {
-    return <p className="text-sm text-slate-500 dark:text-slate-400">No sessions yet</p>
+    return <p className="text-sm text-slate-500 dark:text-slate-400">No sessions in this period.</p>
   }
 
-  if (sessions.length === 1) {
-    return (
-      <p className="text-sm text-slate-500 dark:text-slate-400">
-        Log a few more sessions to see a trend.
-      </p>
-    )
-  }
-
-  const timestamps = sessions.map((s) => toTimestamp(s.date))
-  const minT = timestamps[0]
-  const maxT = timestamps[timestamps.length - 1]
+  // Day-based x scale: from the start of period.start to the end of period.end.
+  const totalDays = daysBetween(period.start, period.end) + 1
   const plotWidth = WIDTH - PAD_LEFT - PAD_RIGHT
+  const xForDay = (dayOffset: number) => PAD_LEFT + (dayOffset / totalDays) * plotWidth
+  const xForDate = (iso: string, withinDay = 0) => xForDay(daysBetween(period.start, iso) + withinDay)
 
-  const points: PlottedPoint[] = sessions.map((session, i) => ({
+  const points: PlottedPoint[] = sessions.map((session) => ({
     session,
-    x: PAD_LEFT + ((timestamps[i] - minT) / (maxT - minT)) * plotWidth,
+    x: xForDate(session.date, 0.5),
   }))
   const segments = toSegments(points)
 
-  // Always label the first and last point; in between, label each month
-  // boundary crossed, skipping any that would sit too close to its
-  // neighbor to stay readable.
+  // Label both ends of the period, and each month start in between,
+  // skipping any that would sit too close to a neighbor to stay readable.
   const labels: { x: number; text: string; anchor: 'start' | 'middle' | 'end' }[] = [
-    { x: points[0].x, text: formatShortDate(sessions[0].date), anchor: 'start' },
+    { x: xForDay(0), text: formatShortDate(period.start), anchor: 'start' },
   ]
-  for (let i = 1; i < sessions.length - 1; i++) {
-    if (monthOf(sessions[i].date) === monthOf(sessions[i - 1].date)) continue
-    const x = points[i].x
+  const firstOfMonth = period.start.slice(0, 8) + '01'
+  for (let month = addMonths(firstOfMonth, 1); month <= period.end; month = addMonths(month, 1)) {
+    const x = xForDate(month)
     if (x - labels[labels.length - 1].x < MIN_LABEL_GAP) continue
-    labels.push({ x, text: formatMonthOnly(sessions[i].date), anchor: 'middle' })
+    labels.push({ x, text: formatMonthStart(month), anchor: 'middle' })
   }
-  const lastX = points[points.length - 1].x
-  const lastLabel = { x: lastX, text: formatShortDate(sessions[sessions.length - 1].date), anchor: 'end' as const }
-  if (lastX - labels[labels.length - 1].x < MIN_LABEL_GAP) labels[labels.length - 1] = lastLabel
-  else labels.push(lastLabel)
+  const lastLabel = { x: xForDay(totalDays), text: formatShortDate(period.end), anchor: 'end' as const }
+  while (labels.length > 1 && lastLabel.x - labels[labels.length - 1].x < MIN_LABEL_GAP) labels.pop()
+  labels.push(lastLabel)
 
   const breakMidpoints = points
     .map((p, i) => (p.session.isBreakFromPrevious ? (p.x + points[i - 1].x) / 2 : null))
@@ -109,7 +96,7 @@ export function FormTrendChart({ sessions }: { sessions: SessionFormPoint[] }) {
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       className="h-32 w-full"
       role="img"
-      aria-label="Win rate trend across recent training sessions"
+      aria-label="Win rate trend across training sessions in the selected period"
     >
       {Y_TICKS.map((tick) => (
         <g key={tick}>

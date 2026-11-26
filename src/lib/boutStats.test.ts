@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { computeBoutStats, computeSessionFormTrend, filterBouts, groupBoutsByOpponent, outcomeOf } from './boutStats'
+import {
+  computeBoutStats,
+  computeSessionFormTrend,
+  computeTrendWindow,
+  filterBouts,
+  groupBoutsByOpponent,
+  outcomeOf,
+} from './boutStats'
 import { makeBout } from '../test/fixtures'
 
 describe('outcomeOf', () => {
@@ -219,12 +226,26 @@ describe('computeSessionFormTrend', () => {
     expect(trend.map((s) => s.rollingWinRatePct)).toEqual(trend.map((s) => s.winRatePct))
   })
 
-  it('only includes the most recent `limit` sessions', () => {
+  it('only includes sessions on or after `since`', () => {
     const bouts = Array.from({ length: 5 }, (_, i) =>
       makeBout({ bout_date: `2026-10-0${i + 1}`, fencer_score: 15, opponent_score: 10 }),
     )
-    const trend = computeSessionFormTrend(bouts, { limit: 2 })
+    const trend = computeSessionFormTrend(bouts, { since: '2026-10-04' })
     expect(trend.map((s) => s.date)).toEqual(['2026-10-04', '2026-10-05'])
+  })
+
+  it('pools the rolling average over bouts, so a big session outweighs a small one', () => {
+    const trend = computeSessionFormTrend(
+      [
+        makeBout({ bout_date: '2026-10-01', fencer_score: 15, opponent_score: 10 }), // 1/1
+        ...Array.from({ length: 3 }, () =>
+          makeBout({ bout_date: '2026-10-02', fencer_score: 8, opponent_score: 15 }),
+        ), // 0/3
+      ],
+      { rollingWindowSize: 3 },
+    )
+    // 1 win out of 4 bouts, not the 50% a per-session average would give
+    expect(trend[1].rollingWinRatePct).toBe(25)
   })
 
   it('flags a break when the gap since the previous session exceeds the threshold', () => {
@@ -250,5 +271,25 @@ describe('computeSessionFormTrend', () => {
     )
     // without the reset this would average in the two pre-break losses too
     expect(trend[2].rollingWinRatePct).toBe(100)
+  })
+})
+
+describe('computeTrendWindow', () => {
+  const today = '2026-11-26' // a Thursday
+
+  it('goes back the chosen number of months, snapped to a Monday', () => {
+    // 3 months back is Wed 2026-08-26 -> Monday 2026-08-24
+    expect(computeTrendWindow('3m', [], today)).toEqual({ start: '2026-08-24', end: today })
+    // 1 month back is Mon 2026-10-26 already
+    expect(computeTrendWindow('1m', [], today).start).toBe('2026-10-26')
+  })
+
+  it('starts "all" at the week of the earliest bout', () => {
+    const bouts = [makeBout({ bout_date: '2026-11-20' }), makeBout({ bout_date: '2025-06-05' })]
+    expect(computeTrendWindow('all', bouts, today)).toEqual({ start: '2025-06-02', end: today })
+  })
+
+  it('extends the end to a bout dated after today', () => {
+    expect(computeTrendWindow('1m', [makeBout({ bout_date: '2026-11-28' })], today).end).toBe('2026-11-28')
   })
 })
