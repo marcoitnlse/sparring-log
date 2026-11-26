@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { SessionFormPoint, TrendWindow, WeeklyFormPoint } from '../lib/boutStats'
+import { loadTrendLines, saveTrendLines, toggleTrendLine, type TrendLine } from '../lib/trendLines'
 import { addDays, addMonths, daysBetween, parseIsoDate } from '../lib/isoDate'
 
 const WIDTH = 300
@@ -59,6 +61,12 @@ function toWeekRuns(weeks: WeeklyFormPoint[]): WeeklyFormPoint[][] {
   return runs
 }
 
+const LEGEND: { line: TrendLine; label: string; swatch: string }[] = [
+  { line: 'sessions', label: 'Sessions', swatch: 'h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-500' },
+  { line: 'rolling', label: '3-session avg', swatch: 'h-0.5 w-4 rounded bg-emerald-500 dark:bg-emerald-400' },
+  { line: 'weekly', label: 'Weekly avg', swatch: 'h-0.5 w-4 rounded bg-orange-500 dark:bg-orange-400' },
+]
+
 /** Win-rate trend across training sessions in the selected period: a
  * smoothed rolling-average line with each session's raw (noisier) ratio
  * plotted as a dot and a thin connecting line, so a single standout day
@@ -66,7 +74,8 @@ function toWeekRuns(weeks: WeeklyFormPoint[]): WeeklyFormPoint[][] {
  * by day (each session sits mid-day), so empty stretches read as time
  * without fencing, and a training break shows as a gap in both lines
  * rather than a line drawn straight through it. An orange step line adds
- * the Monday–Sunday weekly average, each week drawn flat across its days. */
+ * the Monday–Sunday weekly average, each week drawn flat across its days.
+ * The legend underneath doubles as on/off buttons for each line. */
 export function FormTrendChart({
   sessions,
   weeks,
@@ -76,6 +85,14 @@ export function FormTrendChart({
   weeks: WeeklyFormPoint[]
   period: TrendWindow
 }) {
+  const [visible, setVisible] = useState(loadTrendLines)
+
+  function toggle(line: TrendLine) {
+    const next = toggleTrendLine(visible, line)
+    setVisible(next)
+    saveTrendLines(next)
+  }
+
   if (sessions.length === 0) {
     return <p className="text-sm text-slate-500 dark:text-slate-400">No sessions in this period.</p>
   }
@@ -121,126 +138,144 @@ export function FormTrendChart({
     .filter((x): x is number => x !== null)
 
   return (
-    <svg
-      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-      className="h-32 w-full"
-      role="img"
-      aria-label="Win rate trend across training sessions in the selected period"
-    >
-      {Y_TICKS.map((tick) => (
-        <g key={tick}>
-          <line
-            x1={PAD_LEFT}
-            x2={WIDTH - PAD_RIGHT}
-            y1={yFor(tick)}
-            y2={yFor(tick)}
-            className="stroke-slate-200 dark:stroke-slate-800"
-            strokeWidth={1}
-            strokeDasharray={tick === 50 ? '3 3' : undefined}
-          />
-          <text
-            x={PAD_LEFT - 4}
-            y={yFor(tick)}
-            textAnchor="end"
-            dominantBaseline="middle"
-            className="fill-slate-400 text-[8px] dark:fill-slate-500"
-          >
-            {tick}%
-          </text>
-        </g>
-      ))}
-      <text
-        x={10}
-        y={(PAD_TOP + (HEIGHT - PAD_BOTTOM)) / 2}
-        textAnchor="middle"
-        transform={`rotate(-90, 10, ${(PAD_TOP + (HEIGHT - PAD_BOTTOM)) / 2})`}
-        className="fill-slate-400 text-[11px] dark:fill-slate-500"
+    <>
+      <svg
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        className="h-32 w-full"
+        role="img"
+        aria-label="Win rate trend across training sessions in the selected period"
       >
-        % of wins
-      </text>
-
-      {breakMidpoints.map((x) => (
-        <line
-          key={x}
-          x1={x}
-          x2={x}
-          y1={PAD_TOP}
-          y2={HEIGHT - PAD_BOTTOM}
-          className="stroke-slate-300 dark:stroke-slate-700"
-          strokeWidth={1}
-          strokeDasharray="2 2"
-        />
-      ))}
-
-      {segments.map((segment) => (
-        <polyline
-          key={`raw-${segment[0].session.date}`}
-          points={segment.map((p) => `${p.x},${yFor(p.session.winRatePct)}`).join(' ')}
-          fill="none"
-          className="stroke-slate-400 dark:stroke-slate-600"
-          strokeWidth={1}
-        />
-      ))}
-      {segments.map((segment) => (
-        <polyline
-          key={`rolling-${segment[0].session.date}`}
-          points={segment.map((p) => `${p.x},${yFor(p.session.rollingWinRatePct)}`).join(' ')}
-          fill="none"
-          className="stroke-emerald-500 dark:stroke-emerald-400"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      ))}
-      {weekRuns.map((run) => (
-        <polyline
-          key={`weekly-${run[0].weekStart}`}
-          points={run
-            .map(weekSpan)
-            .map(({ x0, x1, y }) => `${x0},${y} ${x1},${y}`)
-            .join(' ')}
-          fill="none"
-          className="stroke-orange-500 dark:stroke-orange-400"
-          strokeWidth={2}
-          strokeLinejoin="round"
-        />
-      ))}
-      {weeks.map((week) => {
-        const { x0, x1, y } = weekSpan(week)
-        // Invisible, wider hit area so the week's tooltip is easy to hover.
-        return (
-          <line key={`weekly-hit-${week.weekStart}`} x1={x0} x2={x1} y1={y} y2={y} stroke="transparent" strokeWidth={8}>
-            <title>
-              Week of {formatShortDate(week.weekStart)}: {week.winRatePct}% ({week.wins}W-{week.losses}L)
-            </title>
-          </line>
-        )
-      })}
-      {points.map((p) => (
-        <circle
-          key={p.session.date}
-          cx={p.x}
-          cy={yFor(p.session.winRatePct)}
-          r={2.5}
-          className="fill-slate-400 dark:fill-slate-500"
-        >
-          <title>
-            {p.session.date}: {p.session.winRatePct}% ({p.session.wins}W-{p.session.losses}L)
-          </title>
-        </circle>
-      ))}
-
-      {labels.map((label) => (
+        {Y_TICKS.map((tick) => (
+          <g key={tick}>
+            <line
+              x1={PAD_LEFT}
+              x2={WIDTH - PAD_RIGHT}
+              y1={yFor(tick)}
+              y2={yFor(tick)}
+              className="stroke-slate-200 dark:stroke-slate-800"
+              strokeWidth={1}
+              strokeDasharray={tick === 50 ? '3 3' : undefined}
+            />
+            <text
+              x={PAD_LEFT - 4}
+              y={yFor(tick)}
+              textAnchor="end"
+              dominantBaseline="middle"
+              className="fill-slate-400 text-[8px] dark:fill-slate-500"
+            >
+              {tick}%
+            </text>
+          </g>
+        ))}
         <text
-          key={label.x}
-          x={label.x}
-          y={HEIGHT - 4}
-          textAnchor={label.anchor}
+          x={10}
+          y={(PAD_TOP + (HEIGHT - PAD_BOTTOM)) / 2}
+          textAnchor="middle"
+          transform={`rotate(-90, 10, ${(PAD_TOP + (HEIGHT - PAD_BOTTOM)) / 2})`}
           className="fill-slate-400 text-[11px] dark:fill-slate-500"
         >
-          {label.text}
+          % of wins
         </text>
-      ))}
-    </svg>
+
+        {breakMidpoints.map((x) => (
+          <line
+            key={x}
+            x1={x}
+            x2={x}
+            y1={PAD_TOP}
+            y2={HEIGHT - PAD_BOTTOM}
+            className="stroke-slate-300 dark:stroke-slate-700"
+            strokeWidth={1}
+            strokeDasharray="2 2"
+          />
+        ))}
+
+        {visible.sessions && segments.map((segment) => (
+          <polyline
+            key={`raw-${segment[0].session.date}`}
+            points={segment.map((p) => `${p.x},${yFor(p.session.winRatePct)}`).join(' ')}
+            fill="none"
+            className="stroke-slate-400 dark:stroke-slate-600"
+            strokeWidth={1}
+          />
+        ))}
+        {visible.rolling && segments.map((segment) => (
+          <polyline
+            key={`rolling-${segment[0].session.date}`}
+            points={segment.map((p) => `${p.x},${yFor(p.session.rollingWinRatePct)}`).join(' ')}
+            fill="none"
+            className="stroke-emerald-500 dark:stroke-emerald-400"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
+        {visible.weekly && weekRuns.map((run) => (
+          <polyline
+            key={`weekly-${run[0].weekStart}`}
+            points={run
+              .map(weekSpan)
+              .map(({ x0, x1, y }) => `${x0},${y} ${x1},${y}`)
+              .join(' ')}
+            fill="none"
+            className="stroke-orange-500 dark:stroke-orange-400"
+            strokeWidth={2}
+            strokeLinejoin="round"
+          />
+        ))}
+        {visible.weekly && weeks.map((week) => {
+          const { x0, x1, y } = weekSpan(week)
+          // Invisible, wider hit area so the week's tooltip is easy to hover.
+          return (
+            <line key={`weekly-hit-${week.weekStart}`} x1={x0} x2={x1} y1={y} y2={y} stroke="transparent" strokeWidth={8}>
+              <title>
+                Week of {formatShortDate(week.weekStart)}: {week.winRatePct}% ({week.wins}W-{week.losses}L)
+              </title>
+            </line>
+          )
+        })}
+        {visible.sessions && points.map((p) => (
+          <circle
+            key={p.session.date}
+            cx={p.x}
+            cy={yFor(p.session.winRatePct)}
+            r={2.5}
+            className="fill-slate-400 dark:fill-slate-500"
+          >
+            <title>
+              {p.session.date}: {p.session.winRatePct}% ({p.session.wins}W-{p.session.losses}L)
+            </title>
+          </circle>
+        ))}
+
+        {labels.map((label) => (
+          <text
+            key={label.x}
+            x={label.x}
+            y={HEIGHT - 4}
+            textAnchor={label.anchor}
+            className="fill-slate-400 text-[11px] dark:fill-slate-500"
+          >
+            {label.text}
+          </text>
+        ))}
+      </svg>
+      <div className="mt-2 flex flex-wrap justify-center gap-x-1 gap-y-1">
+        {LEGEND.map(({ line, label, swatch }) => (
+          <button
+            key={line}
+            type="button"
+            onClick={() => toggle(line)}
+            aria-pressed={visible[line]}
+            className={`flex items-center gap-1.5 rounded-full px-2 py-1 text-xs text-slate-600 transition-opacity dark:text-slate-300 ${
+              visible[line] ? '' : 'opacity-35'
+            }`}
+          >
+            <span className={swatch} aria-hidden="true" />
+            {label}
+          </button>
+        ))}
+      </div>
+    </>
   )
 }
