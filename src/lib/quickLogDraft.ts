@@ -30,3 +30,8 @@ export function saveQuickLogDraft(next: QuickLogDraft) {
 export function setDraftOpponent(opponentId: string) {
   draft = { ...draft, opponentId }
 }
+
+/** Forgets the draft — what a full reload does. Lets tests start clean. */
+export function clearQuickLogDraft() {
+  draft = {}
+}
