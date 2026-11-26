@@ -47,6 +47,13 @@ export function StatsPage() {
     handednessFilter !== 'all',
   ].filter(Boolean).length
 
+  function clearFilters() {
+    setOpponentFilter('all')
+    setFormatFilter('all')
+    setTargetFilter('all')
+    setHandednessFilter('all')
+  }
+
   const filteredBouts = useMemo(
     () =>
       filterBouts(bouts, {
@@ -74,15 +81,28 @@ export function StatsPage() {
   return (
     <div className="space-y-6 p-4">
       <section>
-        <button
-          type="button"
-          onClick={() => setFiltersOpen((v) => !v)}
-          aria-expanded={filtersOpen}
-          className="flex w-full items-center justify-between rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
-        >
-          <span>Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</span>
-          <span className="text-slate-400 dark:text-slate-500">{filtersOpen ? '▲' : '▼'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            aria-expanded={filtersOpen}
+            className="flex flex-1 items-center justify-between rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+          >
+            <span>Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</span>
+            <span className="text-slate-400 dark:text-slate-500">{filtersOpen ? '▲' : '▼'}</span>
+          </button>
+          {/* Outside the toggle (a button can't hold a button), and shown
+           * whether the panel is open or closed. */}
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="shrink-0 px-1 py-2 text-sm text-slate-500 underline underline-offset-2 dark:text-slate-400"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
         {filtersOpen && (
           <div className="mt-3 flex flex-col gap-3">
             <select

@@ -110,7 +110,7 @@ This schema already supports the deferred features with no migration needed: hea
 | `/next` | Next Opponent | Pre-bout review: pick who you're fencing next and see every note against them, grouped by category (What worked / What didn't work / Other comments), each dated, newest first. Picking also pre-selects them on the Log screen |
 | `/history` | Bout History | Date-grouped, paginated ("Load more") list, tap a bout to edit or delete it |
 | `/opponents` | Opponents | Add (collapsed behind a button)/edit/delete opponents (name, handedness); each row shows head-to-head record + recent-form dots, tap to expand the last 5 bouts against them (with their notes inline, and "Show all" for older ones) |
-| `/stats` | Stats & Profile | Filterable record (by opponent, match format, target score, opponent handedness), form trend chart (1M/3M/6M/All range, default 3M, chart only; per-session dots, 3-session average and Monday–Sunday weekly average in orange (a point per week at Thursday), all bout-weighted, each toggled from the legend and remembered per device), touches scored/conceded/margin, and display-name edit |
+| `/stats` | Stats & Profile | Filterable record (by opponent, match format, target score, opponent handedness; "Clear all" resets them), form trend chart (1M/3M/6M/All range, default 3M, chart only; per-session dots, 3-session average and Monday–Sunday weekly average in orange (a point per week at Thursday), all bout-weighted, each toggled from the legend and remembered per device), touches scored/conceded/margin, and display-name edit |
 
 Bottom tab bar nav (Log / Next / History / Opponents / Stats), thumb-reachable, hidden on `/login`.
 
