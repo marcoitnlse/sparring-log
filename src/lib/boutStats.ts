@@ -2,6 +2,7 @@ import type { Bout } from '../hooks/useBouts'
 import type { BoutFormatFilter, TargetScoreFilter } from './boutOptions'
 import { categoryOfBoutFormat } from './boutOptions'
 import type { HandednessFilter } from './opponentOptions'
+import { addMonths, daysBetween, mondayOf, todayIso } from './isoDate'
 
 export type BoutOutcome = 'win' | 'loss'
 
@@ -114,28 +115,22 @@ export interface SessionFormPoint {
 }
 
 export interface SessionTrendOptions {
-  /** How many of the most recent sessions to include. */
-  limit?: number
+  /** Only sessions on or after this date (inclusive) are included. */
+  since?: string
   /** How many sessions the rolling average smooths over. */
   rollingWindowSize?: number
   /** A gap longer than this many days counts as a training break. */
   breakThresholdDays?: number
 }
 
-function daysBetween(earlierDate: string, laterDate: string): number {
-  const MS_PER_DAY = 24 * 60 * 60 * 1000
-  return (new Date(laterDate + 'T00:00:00').getTime() - new Date(earlierDate + 'T00:00:00').getTime()) / MS_PER_DAY
-}
-
 /** One point per training session (bouts grouped by date), oldest first,
- * for charting a recent win-rate trend. Only the most recent `limit`
- * sessions are included — an unbounded chart gets unreadable as history
- * grows, and recency is what matters for a trend. A single session's raw
- * ratio is noisy (a 2-bout day swings between 0/50/100%), so each point
- * also carries a rolling average — reset across any training break so a
- * layoff doesn't blend stale pre-break form into the current trend. */
+ * for charting a win-rate trend over the selected period (`since`). A
+ * single session's raw ratio is noisy (a 2-bout day swings between
+ * 0/50/100%), so each point also carries a rolling average — pooled over
+ * bouts, not averaged per session, and reset across any training break so
+ * a layoff doesn't blend stale pre-break form into the current trend. */
 export function computeSessionFormTrend(bouts: Bout[], options: SessionTrendOptions = {}): SessionFormPoint[] {
-  const { limit = 20, rollingWindowSize = 3, breakThresholdDays = 10 } = options
+  const { since, rollingWindowSize = 3, breakThresholdDays = 10 } = options
 
   const byDate = new Map<string, { wins: number; losses: number }>()
   for (const bout of bouts) {
@@ -154,7 +149,7 @@ export function computeSessionFormTrend(bouts: Bout[], options: SessionTrendOpti
       winRatePct: Math.round((wins / (wins + losses)) * 1000) / 10,
     }))
 
-  const sessions = allSessions.slice(Math.max(0, allSessions.length - limit))
+  const sessions = since ? allSessions.filter((session) => session.date >= since) : allSessions
 
   let segmentStart = 0
   return sessions.map((session, i) => {
@@ -171,4 +166,71 @@ export function computeSessionFormTrend(bouts: Bout[], options: SessionTrendOpti
       isBreakFromPrevious,
     }
   })
+}
+
+export type TrendRange = '1m' | '3m' | '6m' | 'all'
+
+export const TREND_RANGE_OPTIONS: readonly { value: TrendRange; label: string }[] = [
+  { value: '1m', label: '1M' },
+  { value: '3m', label: '3M' },
+  { value: '6m', label: '6M' },
+  { value: 'all', label: 'All' },
+]
+
+const RANGE_MONTHS: Record<Exclude<TrendRange, 'all'>, number> = { '1m': 1, '3m': 3, '6m': 6 }
+
+/** The calendar span the trend chart covers, both ends inclusive. */
+export interface TrendWindow {
+  start: string
+  end: string
+}
+
+/** Turns a range choice into dates. The start snaps back to a Monday so
+ * the first weekly average covers a whole Monday–Sunday week rather than
+ * a partial one. The end is today — or a later bout date, if one was
+ * logged ahead — so the chart shows how long it's been since the last
+ * session. "All" starts at the week of the earliest bout. */
+export function computeTrendWindow(range: TrendRange, bouts: Bout[], today: string = todayIso()): TrendWindow {
+  let latest = today
+  let earliest = today
+  for (const bout of bouts) {
+    if (bout.bout_date > latest) latest = bout.bout_date
+    if (bout.bout_date < earliest) earliest = bout.bout_date
+  }
+  const start = range === 'all' ? earliest : addMonths(today, -RANGE_MONTHS[range])
+  return { start: mondayOf(start), end: latest }
+}
+
+export interface WeeklyFormPoint {
+  /** Monday of the Monday–Sunday week. */
+  weekStart: string
+  wins: number
+  losses: number
+  /** All wins this week over all bouts this week, 0-100 — pooled, so a
+   * big session counts for more than a single-bout one. */
+  winRatePct: number
+}
+
+/** One point per Monday–Sunday week that has at least one bout, oldest
+ * first. Weeks without bouts are left out, not counted as zero — the
+ * chart shows them as gaps. */
+export function computeWeeklyFormTrend(bouts: Bout[], options: { since?: string } = {}): WeeklyFormPoint[] {
+  const byWeek = new Map<string, { wins: number; losses: number }>()
+  for (const bout of bouts) {
+    if (options.since && bout.bout_date < options.since) continue
+    const weekStart = mondayOf(bout.bout_date)
+    const entry = byWeek.get(weekStart) ?? { wins: 0, losses: 0 }
+    if (outcomeOf(bout) === 'win') entry.wins++
+    else entry.losses++
+    byWeek.set(weekStart, entry)
+  }
+
+  return [...byWeek.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([weekStart, { wins, losses }]) => ({
+      weekStart,
+      wins,
+      losses,
+      winRatePct: Math.round((wins / (wins + losses)) * 1000) / 10,
+    }))
 }
